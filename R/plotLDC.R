@@ -6,7 +6,7 @@
 
 
 # LDC plot function - used below if plot_it=TRUE
-ldc_plot <- function(x){
+plotLDC <- function(x){
   # Order flow data
   flow.plot <- x[order(x$flow.percentile),]
   # Pull out observed loadings (E.coli data)
