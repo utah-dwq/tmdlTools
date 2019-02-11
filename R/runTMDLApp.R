@@ -6,6 +6,7 @@
 #' @param geom_crit Numeric. The geometric mean criterion for the E.coli dataset, taken from R317-2-14.
 #' @param max_crit Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.
 #' @param mos Numeric proportion. The percent margin of safety (as a proportion) to use when calculating percent exceedance/reduction needed.
+#' @export runTMDLApp
 #' @import DT
 #' @import shinyjs
 #' @import shiny

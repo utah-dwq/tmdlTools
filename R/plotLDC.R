@@ -1,7 +1,8 @@
 #' Plot Load Duration Curve
-#' 
+#'
 #' This function creates a plot of observed and loading capacities as a function of flow percentile for a given site.
 #' @param x A data frame containing a field labeled "observed.loading", "loading.capacity", and "flow.percentile". Generally used on a site level.
+#' @export plotLDC
 
 
 
