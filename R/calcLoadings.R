@@ -28,8 +28,8 @@ library(dplyr)
 library(shiny)
 
 ### TESTING ####
-calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Spring_Creek.xlsx", specs=TRUE, geom_crit = 206, max_crit = 668, mos = 0.1, plot_it = FALSE, run_shiny = FALSE, overwrite = FALSE)
-
+# calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Spring_Creek.xlsx", specs=TRUE, geom_crit = 206, max_crit = 668, mos = 0.1, plot_it = FALSE, run_shiny = FALSE, overwrite = FALSE)
+# 
 calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf=1000/100*28.3168*3600*24, plot_it=FALSE, run_shiny=TRUE, overwrite=FALSE){
   
   ## Calculation functions needed for plotting and assessment ## 
