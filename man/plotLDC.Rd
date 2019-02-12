@@ -7,7 +7,7 @@
 plotLDC(x)
 }
 \arguments{
-\item{x}{A data frame containing a field labeled "observed.loading", "loading.capacity", and "flow.percentile". Generally used on a site level.}
+\item{x}{A data frame containing a field labeled "Observed_Loading", "Loading_Capacity", "Loading_Capacity_MOS", "Season", and "Flow_Percentile". Generally used on a site level.}
 }
 \description{
 This function creates a plot of observed and loading capacities as a function of flow percentile for a given site.

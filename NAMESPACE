@@ -2,9 +2,11 @@
 
 export(calcLoadings)
 export(plotLDC)
+export(plotMonthlyLoads)
 export(plotTimeSeries)
 export(runTMDLApp)
 import(DT)
+import(colorspace)
 import(shiny)
 import(shinyjs)
 importFrom(lubridate,month)
