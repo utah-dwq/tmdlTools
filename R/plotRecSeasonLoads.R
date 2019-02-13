@@ -12,7 +12,7 @@ plotRecSeasonLoads <- function(x, wndws = FALSE){
     windows() 
   }
   rec.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
-  barp <- barplot(t(rec.p), beside=T, main = paste("Rec Season E.coli Loading Geomean by Year:",x$ML_Name[1]), ylim=c(0, max(c(rec.p$observed.loading, rec.p$loading.capacity))+.1*max(c(rec.p$observed.loading, rec.p$loading.capacity))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
+  barp <- barplot(t(rec.p), beside=T, main = paste("Rec Season E.coli Loading Geomean by Year:",x$ML_Name[1]), ylim=c(0, max(c(rec.p$Observed_Loading, rec.p$Loading_Capacity_MOS))+.1*max(c(rec.p$Observed_Loading, rec.p$Loading_Capacity_MOS))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
   legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
   box(bty="l")
   barps <- barp[1,]
