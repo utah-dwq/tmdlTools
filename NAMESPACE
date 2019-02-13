@@ -3,6 +3,7 @@
 export(calcLoadings)
 export(plotLDC)
 export(plotMonthlyLoads)
+export(plotRecSeasonLoads)
 export(plotTimeSeries)
 export(runTMDLApp)
 import(DT)
