@@ -8,7 +8,7 @@
 #' @importFrom yarrr piratepal
 
 
-plotTimeSeries <- function(x,max_crit, yeslines=TRUE, sitepal = "basel"){
+plotTimeSeries <- function(x,max_crit, wndws=FALSE, yeslines=TRUE, sitepal = "basel"){
   if(wndws){
     windows() 
   }
