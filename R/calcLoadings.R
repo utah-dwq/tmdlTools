@@ -159,10 +159,10 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
   
   ############################## PLOTTING USING FUNCTIONS ABOVE ###################
   if(plot_it){
-    by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=FALSE) # time series plots
-    by(ldc.dat,ldc.dat[,"MLID"],plotLDC) # load duration curves
-    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads) # monthly loadings
-    by(rec,rec[,"MLID"],plotRecSeasonLoads) # rec season loadings by year
+    by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=FALSE, wndws=TRUE) # time series plots
+    by(ldc.dat,ldc.dat[,"MLID"],plotLDC, wndws=TRUE) # load duration curves
+    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads, wndws=TRUE) # monthly loadings
+    by(rec,rec[,"MLID"],plotRecSeasonLoads, wndws=TRUE) # rec season loadings by year
   }
 
   ########################### RUN SHINY APP ############################################
