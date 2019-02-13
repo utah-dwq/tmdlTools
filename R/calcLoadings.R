@@ -155,44 +155,14 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
     wb_path_new = wb_path
   }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)
     wb_path_new = paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx")}
-  
-  # MONTHLY Plotting function - used below if plot_it=TRUE
-  month_loading_plot <- function(x){
-    rownames(x) <- x$month
-    mo_load.p <- x[,!names(x)%in%c("month","perc.red","MLID","ML_Name")]
-    windows()
-    barp <- barplot(t(mo_load.p), beside=T, main = paste("Monthly E.coli Loading Geomean:",x$ML_Name[1]), ylim=c(0, max(c(mo_load.p$observed.loading, mo_load.p$loading.capacity))+0.1*max(c(mo_load.p$observed.loading, mo_load.p$loading.capacity))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
-    legend("topleft",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
-    box(bty="l")
-    barps <- barp[1,]
-    barperc <- data.frame(cbind(barps,x$observed.loading, x$perc.red))
-    barperc <- barperc[barperc$V3>0,]
-    barperc$V3 <- paste(barperc$V3,"%",sep="")
-    text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=0.8)
-  }
-  
-  # REC SEASON Plotting function - used below if plot_it=TRUE
-  rec_season_plot <- function(x){
-    rownames(x) <- x$year
-    windows()
-    rec.p <- x[,!names(x)%in%c("year","MLID","ML_Name","perc.red")]
-    barp <- barplot(t(rec.p), beside=T, main = paste("Rec Season E.coli Loading Geomean by Year:",x$ML_Name[1]), ylim=c(0, max(c(rec.p$observed.loading, rec.p$loading.capacity))+.1*max(c(rec.p$observed.loading, rec.p$loading.capacity))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
-    legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
-    box(bty="l")
-    barps <- barp[1,]
-    barperc <- data.frame(cbind(barps,x$observed.loading, x$perc.red))
-    barperc <- barperc[barperc$V3>0,]
-    barperc$V3 <- paste(barperc$V3,"%",sep="")
-    text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=0.8)
-    
-  }
+
   
   ############################## PLOTTING USING FUNCTIONS ABOVE ###################
   if(plot_it){
     by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=FALSE) # time series plots
     by(ldc.dat,ldc.dat[,"MLID"],plotLDC) # load duration curves
-    by(mo_load,mo_load[,"MLID"],month_loading_plot) # monthly loadings
-    by(rec,rec[,"MLID"],rec_season_plot) # rec season loadings by year
+    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads) # monthly loadings
+    by(rec,rec[,"MLID"],plotRecSeasonLoads) # rec season loadings by year
   }
 
   ########################### RUN SHINY APP ############################################
