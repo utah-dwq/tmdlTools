@@ -3,11 +3,15 @@
 #' This function creates a plot of parameter concentrations over time. Can handle plotting multiple sites over time.
 #' @param x A data frame containing a field labeled "E.coli" and another labeled "Date", which has been converted to a date format.
 #' @param max_crit Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.
+#' @param wndws Logical. If TRUE, will create plots in individual windows. Default is false for Shiny.
 #' @export plotTimeSeries
 #' @importFrom yarrr piratepal
 
 
 plotTimeSeries <- function(x,max_crit, yeslines=TRUE, sitepal = "basel"){
+  if(wndws){
+    windows() 
+  }
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
   colrs <- piratepal(sitepal)

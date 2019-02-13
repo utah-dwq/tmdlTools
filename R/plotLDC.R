@@ -2,6 +2,7 @@
 #'
 #' This function creates a plot of observed and loading capacities as a function of flow percentile for a given site.
 #' @param x A data frame containing a field labeled "Observed_Loading", "Loading_Capacity", "Loading_Capacity_MOS", "Season", and "Flow_Percentile". Generally used on a site level.
+#' @param wndws Logical. If TRUE, will create plots in individual windows. Default is false for Shiny.
 #' @export plotLDC
 #' @import colorspace
 
@@ -13,12 +14,14 @@ plotLDC <- function(x){
   flow.plot <- x[order(x$Flow_Percentile),]
   # Pull out observed loadings (E.coli data)
   ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
-  colpal <- sequential_hcl(4)
+  colpal <- colorspace::sequential_hcl(4)
   spre <- ecoli.loads[ecoli.loads$Season=="Spring",]
   sume <- ecoli.loads[ecoli.loads$Season=="Summer",]
   fale <- ecoli.loads[ecoli.loads$Season=="Fall",]
   wine <- ecoli.loads[ecoli.loads$Season=="Winter",]
-  windows()
+  if(wndws){
+    windows() 
+  }
   plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (MPN/day)", xlim=c(0, 100), ylim=c(0,max(ecoli.loads$Observed_Loading)), main=paste("Load Duration Curve:",x$ML_Name[1]))
   abline(v=10, lty=2)
   abline(v=40, lty=2)
