@@ -10,7 +10,12 @@ loading.dat <- readWorkbook(wb.dat, sheet="LDC_Data")
 loading.dat$Date <- as.Date(loading.dat$Date, origin="1899-12-30")
 month.dat <- readWorkbook(wb.dat,sheet="Monthly_Data",startRow=1)
 rec.dat <- readWorkbook(wb.dat,sheet="Rec_Season_Data",startRow=1)
+specs <- readWorkbook(wb.dat,sheet="Inputs",startRow=1)
 
+max_crit = specs$Value[specs$Parameter=="Max Criterion"]
+geom_crit = specs$Value[specs$Parameter=="Geometric Mean Criterion"]
+cf = specs$Value[specs$Parameter=="Correction Factor"]
+mos = specs$Value[specs$Parameter=="Margin of Safety"]
 
 
 # Define UI for application that draws a histogram
@@ -38,11 +43,7 @@ ui <- fluidPage(
              fluidRow(
                column(4,
                       useShinyjs(),
-                      
-                      selectInput("site1",
-                                  label = "Monitoring Location Name",
-                                  choices=c(unique(ecoli.dat$ML_Name))
-                      ),
+                      uiOutput("checkbox"),
                       div(
                         id = "date",
                         dateRangeInput("dateRange",
@@ -54,8 +55,8 @@ ui <- fluidPage(
                       )),
                       actionButton("reset_input","Reset Date Range")),
                column(4,
-                      textInput("crit1",label = "Max Criterion",value=668),
-                      textInput("crit2",label = "Geomean Criterion",value=206)
+                      textInput("crit1",label = "Max Criterion",value=max_crit),
+                      textInput("crit2",label = "Geomean Criterion",value=geom_crit)
                        ),
              column(4,
                     downloadButton("dwn1",label = "Download Graph")
@@ -77,6 +78,12 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  output$checkbox <- renderUI({
+    choice <-  unique(ecoli.dat$ML_Name)
+    checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
+    
+  })
+  
   observeEvent(input$reset_input,{
     reset("date")
   })
@@ -86,20 +93,51 @@ server <- function(input, output) {
   output$loaddat <- renderDataTable({datatable(loading.dat, options = list(dom="t", paging = FALSE))})
   
   output$Time_Series <- renderPlot({
-     x <- ecoli.dat[ecoli.dat$ML_Name==input$site1,]
-     min = input$dateRange[1]
-     max = input$dateRange[2]
-     x <- x[x$Date>min&x$Date<max,]
-     max.e <- max(x$E.coli)
-     min.e <- min(x$E.coli)
-     crit = as.numeric(input$crit1)
-     perc.exc = round(length(x$E.coli[x$E.coli>crit])/length(x$E.coli)*100, digits=0)
-     plot(x$E.coli~x$Date,xlab="",ylab="MPN/100 mL", xaxt="n", pch=19, main=paste("E.coli","in",x$ML_Name[1],":",perc.exc,"% exceed Max Crit Std."))
-     lines(x$E.coli~x$Date,xlab="Date",ylab="MPN/100 mL", lwd=1.5, lty=2)
-     axis.Date(1, at=seq(input$dateRange[1], input$dateRange[2], by="6 months"), format="%m-%Y", las=2, cex=0.8)
-     abline(h=input$crit2,col="orange", lwd=2)
-     abline(h=input$crit1, col="red", lwd=2)
-     l=legend("topleft",c("Max","Geomean"),col=c("red","orange"), lty=1, lwd=2, bty="n", cex=1) 
+    x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
+    # Get number of sites
+    uni.sites <- unique(x$ML_Name)
+    colrs <- piratepal("basel")
+    # Get dates for axis
+    min = input$dateRange[1]
+    max = input$dateRange[2]
+    z <- x[x$Date>min&x$Date<max,]
+    max.e <- max(x$E.coli_Geomean)
+    min.e <- min(x$E.coli_Geomean)
+    # Create an empty plot
+    plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(min.e, max.e))
+    axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
+    abline(h=input$crit2,col="orange", lwd=2)
+    abline(h=input$crit1, col="red", lwd=2)
+    text(min+10,max_crit-50, "Max Crit")
+    text(min+10,geom_crit-50, "Geometric Mean Crit")
+    site = vector()
+    colr = vector()
+    # Start plotting
+    for(i in 1:length(uni.sites)){
+      y = z[z$ML_Name==uni.sites[i],]
+      if(yeslines){
+        lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])  
+      }
+      points(y$E.coli_Geomean~y$Date, pch=21, col="black", bg=colrs[i])
+      site[i] = as.character(uni.sites[i])
+      colr[i] = colrs[i]
+    }
+    l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", cex=1) 
+    
+    # x <- ecoli.dat[ecoli.dat$ML_Name==input$site1,]
+    #  min = input$dateRange[1]
+    #  max = input$dateRange[2]
+    #  x <- x[x$Date>min&x$Date<max,]
+    #  max.e <- max(x$E.coli)
+    #  min.e <- min(x$E.coli)
+    #  crit = as.numeric(input$crit1)
+    #  perc.exc = round(length(x$E.coli[x$E.coli>crit])/length(x$E.coli)*100, digits=0)
+    #  plot(x$E.coli~x$Date,xlab="",ylab="MPN/100 mL", xaxt="n", pch=19, main=paste("E.coli","in",x$ML_Name[1],":",perc.exc,"% exceed Max Crit Std."))
+    #  lines(x$E.coli~x$Date,xlab="Date",ylab="MPN/100 mL", lwd=1.5, lty=2)
+    #  axis.Date(1, at=seq(input$dateRange[1], input$dateRange[2], by="6 months"), format="%m-%Y", las=2, cex=0.8)
+    #  abline(h=input$crit2,col="orange", lwd=2)
+    #  abline(h=input$crit1, col="red", lwd=2)
+    #  l=legend("topleft",c("Max","Geomean"),col=c("red","orange"), lty=1, lwd=2, bty="n", cex=1) 
      #text(x=l$text$x[1], y=l$text$y[1]-l$rect$h[1]/2,paste("Max E.coli:",max.e,"MPN/100 mL"), adj=c(0,1), cex=0.8)
      
    })
