@@ -42,19 +42,21 @@ ui <- fluidPage(
              br(),
              fluidRow(
                column(4,
+                      selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
                       useShinyjs(),
-                      uiOutput("checkbox"),
+                      uiOutput("checkbox")),
+               column(4,
                       div(
                         id = "date",
                         dateRangeInput("dateRange",
-                                     label="Date Range",
-                                     start=min(ecoli.dat$Date),
-                                     end=max(ecoli.dat$Date),
-                                     min=min(ecoli.dat$Date),
-                                     max=max(ecoli.dat$Date)
-                      )),
-                      actionButton("reset_input","Reset Date Range")),
-               column(4,
+                                       label="Date Range",
+                                       start=min(ecoli.dat$Date),
+                                       end=max(ecoli.dat$Date),
+                                       min=min(ecoli.dat$Date),
+                                       max=max(ecoli.dat$Date)
+                        )),
+                      actionButton("reset_input","Reset Date Range"),
+                      br(),
                       textInput("crit1",label = "Max Criterion",value=max_crit),
                       textInput("crit2",label = "Geomean Criterion",value=geom_crit)
                        ),
@@ -63,7 +65,7 @@ ui <- fluidPage(
              ))
              ), 
     tabPanel("Load Duration Curves",
-             selectInput("site2",
+             selectInput("site1",
                          label = "Monitoring Location Name",
                          choices=c(unique(loading.dat$ML_Name))),
              hr(),
@@ -100,97 +102,90 @@ server <- function(input, output) {
     # Get dates for axis
     min = input$dateRange[1]
     max = input$dateRange[2]
-    z <- x[x$Date>min&x$Date<max,]
-    max.e <- max(x$E.coli_Geomean)
-    min.e <- min(x$E.coli_Geomean)
+    x <- x[x$Date>min&x$Date<max,]
     # Create an empty plot
-    plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(min.e, max.e))
+    plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
     axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
     abline(h=input$crit2,col="orange", lwd=2)
     abline(h=input$crit1, col="red", lwd=2)
-    text(min+10,max_crit-50, "Max Crit")
-    text(min+10,geom_crit-50, "Geometric Mean Crit")
+    text(min+10,as.numeric(input$crit1)-100, "Max Crit")
+    text(min+150,as.numeric(input$crit2)-100, "Geometric Mean Crit")
     site = vector()
     colr = vector()
     # Start plotting
     for(i in 1:length(uni.sites)){
-      y = z[z$ML_Name==uni.sites[i],]
-      if(yeslines){
+      y = x[x$ML_Name==uni.sites[i],]
+      perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(input$crit1)])/length(y$E.coli_Geomean)*100, digits=0)
+      if(input$plottype=="Line"){
         lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])  
       }
       points(y$E.coli_Geomean~y$Date, pch=21, col="black", bg=colrs[i])
-      site[i] = as.character(uni.sites[i])
+      site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = colrs[i]
     }
     l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", cex=1) 
     
-    # x <- ecoli.dat[ecoli.dat$ML_Name==input$site1,]
-    #  min = input$dateRange[1]
-    #  max = input$dateRange[2]
-    #  x <- x[x$Date>min&x$Date<max,]
-    #  max.e <- max(x$E.coli)
-    #  min.e <- min(x$E.coli)
-    #  crit = as.numeric(input$crit1)
-    #  perc.exc = round(length(x$E.coli[x$E.coli>crit])/length(x$E.coli)*100, digits=0)
-    #  plot(x$E.coli~x$Date,xlab="",ylab="MPN/100 mL", xaxt="n", pch=19, main=paste("E.coli","in",x$ML_Name[1],":",perc.exc,"% exceed Max Crit Std."))
-    #  lines(x$E.coli~x$Date,xlab="Date",ylab="MPN/100 mL", lwd=1.5, lty=2)
-    #  axis.Date(1, at=seq(input$dateRange[1], input$dateRange[2], by="6 months"), format="%m-%Y", las=2, cex=0.8)
-    #  abline(h=input$crit2,col="orange", lwd=2)
-    #  abline(h=input$crit1, col="red", lwd=2)
-    #  l=legend("topleft",c("Max","Geomean"),col=c("red","orange"), lty=1, lwd=2, bty="n", cex=1) 
-     #text(x=l$text$x[1], y=l$text$y[1]-l$rect$h[1]/2,paste("Max E.coli:",max.e,"MPN/100 mL"), adj=c(0,1), cex=0.8)
-     
    })
 
    output$LDC <- renderPlot({
-     x <- loading.dat[loading.dat$ML_Name==input$site2,]
-     # Order flow data
-     flow.plot <- x[order(x$flow.percentile),]
+     
+     x <- loading.dat[loading.dat$ML_Name==input$site1,]
+     flow.plot <- x[order(x$Flow_Percentile),]
+     
      # Pull out observed loadings (E.coli data)
-     ecoli.loads <- x[!is.na(x$E.coli),]
-     plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (MPN/day)", xlim=c(0, 100), ylim=c(0,max(ecoli.loads$observed.loading)), main=paste("Load Duration Curve:",x$ML_Name[1]))
+     ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
+     colpal <- colorspace::sequential_hcl(4)
+     spre <- ecoli.loads[ecoli.loads$Season=="Spring",]
+     sume <- ecoli.loads[ecoli.loads$Season=="Summer",]
+     fale <- ecoli.loads[ecoli.loads$Season=="Fall",]
+     wine <- ecoli.loads[ecoli.loads$Season=="Winter",]
+
+     plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (MPN/day)", xlim=c(0, 100), ylim=c(0,max(ecoli.loads$Observed_Loading)), main=paste("Load Duration Curve:",x$ML_Name[1]))
      abline(v=10, lty=2)
      abline(v=40, lty=2)
      abline(v=60, lty=2)
      abline(v=90, lty=2)
-     text(5, max(ecoli.loads$observed.loading)-.2*max(ecoli.loads$observed.loading),"High \n Flows")
-     text(25, max(ecoli.loads$observed.loading)-.2*max(ecoli.loads$observed.loading),"Moist \n Conditions")
-     text(50, max(ecoli.loads$observed.loading)-.2*max(ecoli.loads$observed.loading),"Mid-Range \n Flows")
-     text(75, max(ecoli.loads$observed.loading)-.2*max(ecoli.loads$observed.loading),"Dry \n Conditions")
-     text(95, max(ecoli.loads$observed.loading)-.2*max(ecoli.loads$observed.loading),"Low \n Flows")
-     lines(flow.plot$loading.capacity~flow.plot$flow.percentile, type="l", col="blue", lwd=2)
-     lines(flow.plot$loading.capacity.mos~flow.plot$flow.percentile, col="green", lwd=2)
-     points(ecoli.loads$observed.loading~ecoli.loads$flow.percentile, pch=21, col="black", bg="purple", cex=1.5)
-     legend("topright",legend=c("Loading Capacity","Loading Capacity + 10% MOS", "Observed E.coli Loading"), bty="n", col=c("blue","green","black"), lty=c(1,1,NA),lwd=c(2,2,NA),pch=c(NA,NA,21), pt.bg=c(NA,NA,"purple"), cex=1)
-   })
+     text(5, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"High \n Flows")
+     text(25, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Moist \n Conditions")
+     text(50, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Mid-Range \n Flows")
+     text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Dry \n Conditions")
+     text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Low \n Flows")
+     lines(flow.plot$Loading_Capacity~flow.plot$Flow_Percentile, type="l", col="firebrick3", lwd=2)
+     lines(flow.plot$Loading_Capacity_MOS~flow.plot$Flow_Percentile, col="red", lwd=2)
+     points(spre$Observed_Loading~spre$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=1.5)
+     points(sume$Observed_Loading~sume$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=1.5)
+     points(fale$Observed_Loading~fale$Flow_Percentile, pch=21, col="black", bg=colpal[3], cex=1.5)
+     points(wine$Observed_Loading~wine$Flow_Percentile, pch=21, col="black", bg=colpal[4], cex=1.5)
+     legend("topright",legend=c("Loading Capacity","Loading Capacity + MOS", "E.coli Loading - Spring", "E.coli Loading - Summer","E.coli Loading - Fall", "E.coli Loading - Winter"), bty="n", col=c("firebrick3","red","black","black","black","black"), lty=c(1,1,NA,NA,NA,NA),lwd=c(2,2,NA,NA,NA,NA),pch=c(NA,NA,21,21,21,21), pt.bg=c(NA,NA,colpal), cex=1)
+     
+     })
 
      output$Monthly_Geomeans <- renderPlot({
-       x <- month.dat[month.dat$ML_Name==input$site2,]
+       x <- month.dat[month.dat$ML_Name==input$site1,]
        rownames(x) <- x$month
-       mo_load.p <- x[,!names(x)%in%c("month","perc.red","MLID","ML_Name")]
-       barp <- barplot(t(mo_load.p), beside=T, main = paste("Monthly E.coli Loading Geomean:",x$ML_Name[1]), ylim=c(0, max(c(mo_load.p$observed.loading, mo_load.p$loading.capacity))+0.1*max(c(mo_load.p$observed.loading, mo_load.p$loading.capacity))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
-       legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=1)
+       mo_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
+       barp <- barplot(t(mo_load.p), beside=T, main = paste("Monthly E.coli Loading Geomean:",x$ML_Name[1]), ylim=c(0, max(c(mo_load.p$Observed_Loading, mo_load.p$Loading_Capacity_MOS))+0.1*max(c(mo_load.p$Observed_Loading, mo_load.p$Loading_Capacity_MOS))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
+       legend("topleft",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
        box(bty="l")
        barps <- barp[1,]
-       barperc <- data.frame(cbind(barps,x$observed.loading, x$perc.red))
+       barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
        barperc <- barperc[barperc$V3>0,]
        barperc$V3 <- paste(barperc$V3,"%",sep="")
-       text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
+       text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=0.8)
      }, width = 900, height = 600)
      
      output$Rec_Geomeans <- renderPlot({
-       x <- rec.dat[rec.dat$ML_Name==input$site2,]
+       x <- rec.dat[rec.dat$ML_Name==input$site1,]
        rownames(x) <- x$year
-       rec.p <- x[,!names(x)%in%c("year","MLID","ML_Name","perc.red")]
-       barp <- barplot(t(rec.p), beside=T, main = paste("Rec Season E.coli Loading Geomean by Year:",x$ML_Name[1]), ylim=c(0, max(c(rec.p$observed.loading+.1*rec.p$observed.loading, rec.p$loading.capacity))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
-       legend("topleft",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=1)
+       rec.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
+       barp <- barplot(t(rec.p), beside=T, main = paste("Rec Season E.coli Loading Geomean by Year:",x$ML_Name[1]), ylim=c(0, max(c(rec.p$Observed_Loading, rec.p$Loading_Capacity_MOS))+.1*max(c(rec.p$Observed_Loading, rec.p$Loading_Capacity_MOS))), ylab="E.coli loading MPN/day",col=c("firebrick3","dodgerblue3"))
+       legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
        box(bty="l")
        barps <- barp[1,]
-       barperc <- data.frame(cbind(barps,x$observed.loading, x$perc.red))
+       barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
        barperc <- barperc[barperc$V3>0,]
        barperc$V3 <- paste(barperc$V3,"%",sep="")
-       text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
-       
+       text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=0.8)
      }, width = 900, height = 600)
 }
 
