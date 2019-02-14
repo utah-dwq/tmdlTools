@@ -1,10 +1,7 @@
 ################## SHINY APP ##########################################
 
-library(DT)
-library(shinyjs)
-
 #wb_path_new <- "NFVR_data_EH_2019-02-07.xlsx"
-wb.dat <- loadWorkbook(wb_path_new)
+wb.dat <- loadWorkbook(wb_path)
 ecoli.dat <- readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
 flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)

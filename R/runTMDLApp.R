@@ -10,7 +10,7 @@
 #' @import DT
 #' @import shinyjs
 #' @import shiny
-#' 
+#' @import openxlsx
 
 runTMDLApp <- function(wb_path, specs = TRUE, geom_crit = 126, max_crit = 406, mos = 0.1){
   wb_path <<- wb_path
