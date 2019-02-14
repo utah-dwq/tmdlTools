@@ -152,25 +152,20 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
   ############################ SAVE WORKBOOK FILE WITH NEW SHEETS #########################
   if(overwrite){
     saveWorkbook(wb.dat, wb_path, overwrite = TRUE)
-    wb_path_new = wb_path
   }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)
-    wb_path_new = paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx")}
+        }
 
   
   ############################## PLOTTING USING FUNCTIONS ABOVE ###################
   if(plot_it){
-    by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=FALSE, wndws=TRUE) # time series plots
-    by(ldc.dat,ldc.dat[,"MLID"],plotLDC, wndws=TRUE) # load duration curves
-    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads, wndws=TRUE) # monthly loadings
-    by(rec,rec[,"MLID"],plotRecSeasonLoads, wndws=TRUE) # rec season loadings by year
+    by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=TRUE, wndws=FALSE) # time series plots
+    by(ldc.dat,ldc.dat[,"MLID"],plotLDC, wndws=FALSE) # load duration curves
+    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads, wndws=FALSE) # monthly loadings
+    by(rec,rec[,"MLID"],plotRecSeasonLoads, wndws=FALSE) # rec season loadings by year
   }
 
-  ########################### RUN SHINY APP ############################################
-  if(run_shiny){
-    wb_path_new <<- wb_path_new
-    runApp("app.R")
-  }
 }
+
 
 
 ####### OLD CODE ######

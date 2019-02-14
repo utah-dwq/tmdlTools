@@ -16,7 +16,7 @@ plotRecSeasonLoads <- function(x, wndws = FALSE){
   legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=0.8)
   box(bty="l")
   barps <- barp[1,]
-  barperc <- data.frame(cbind(barps,x$observed.loading, x$perc.red))
+  barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
   barperc <- barperc[barperc$V3>0,]
   barperc$V3 <- paste(barperc$V3,"%",sep="")
   text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=0.8)
