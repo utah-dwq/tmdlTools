@@ -4,10 +4,12 @@
 \alias{plotLDC}
 \title{Plot Load Duration Curve}
 \usage{
-plotLDC(x)
+plotLDC(x, wndws = FALSE)
 }
 \arguments{
 \item{x}{A data frame containing a field labeled "Observed_Loading", "Loading_Capacity", "Loading_Capacity_MOS", "Season", and "Flow_Percentile". Generally used on a site level.}
+
+\item{wndws}{Logical. If TRUE, will create plots in individual windows. Default is false for Shiny.}
 }
 \description{
 This function creates a plot of observed and loading capacities as a function of flow percentile for a given site.

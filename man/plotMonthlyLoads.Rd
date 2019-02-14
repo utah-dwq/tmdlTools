@@ -4,10 +4,12 @@
 \alias{plotMonthlyLoads}
 \title{Plot Observed Loading and Loading Capacity by Month}
 \usage{
-plotMonthlyLoads(x)
+plotMonthlyLoads(x, wndws = FALSE)
 }
 \arguments{
 \item{x}{A data frame containing a field labeled "Observed_Loading", "Loading_Capacity", "Loading_Capacity_MOS", "Season", and "Flow_Percentile". Generally used on a site level.}
+
+\item{wndws}{Logical. If TRUE, will create plots in individual windows. Default is false for Shiny.}
 }
 \description{
 This function creates a boxplot of observed and loading capacities by month for a given site.

@@ -4,12 +4,15 @@
 \alias{plotTimeSeries}
 \title{Plot Parameter Concentrations Over Time}
 \usage{
-plotTimeSeries(x, max_crit, yeslines = TRUE, sitepal = "basel")
+plotTimeSeries(x, max_crit, wndws = FALSE, yeslines = TRUE,
+  sitepal = "basel")
 }
 \arguments{
 \item{x}{A data frame containing a field labeled "E.coli" and another labeled "Date", which has been converted to a date format.}
 
 \item{max_crit}{Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.}
+
+\item{wndws}{Logical. If TRUE, will create plots in individual windows. Default is false for Shiny.}
 }
 \description{
 This function creates a plot of parameter concentrations over time. Can handle plotting multiple sites over time.
