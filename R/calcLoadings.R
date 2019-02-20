@@ -3,6 +3,8 @@
 #' This function takes E.coli concentration and flow data to calculating loadings on a daily, monthly, and rec-season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
 #' @param wb_path A file path to the .xlsx file containing E.coli and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.
 #' @param specs Logical. If TRUE, uses geom_crit, max_crit, and mos from workbook. If FALSE, function requires inputs of geom_crit, max_crit, and mos.
+#' @param rec_ssn A character string defining the recreation season over which to calculate geometric means. Defaults to May 1 to October 31.
+#' @param irg_ssn A character string defining the irrigation season over which to calculate geometric means. Defaults to May 15 to October 15.
 #' @param geom_crit Numeric. The geometric mean criterion for the E.coli dataset, taken from R317-2-14.
 #' @param max_crit Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.
 #' @param cf Numeric. A correction factor to convert E.coli concentrations and flow data to loadings (amount per day). Default converts MPN/100 mL and cfs to MPN/day.
@@ -30,11 +32,26 @@ library(shiny)
 ### TESTING ####
 # calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Spring_Creek.xlsx", specs=TRUE, geom_crit = 206, max_crit = 668, mos = 0.1, plot_it = FALSE, run_shiny = FALSE, overwrite = FALSE)
 # 
-calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf=1000/100*28.3168*3600*24, plot_it=FALSE, run_shiny=TRUE, overwrite=FALSE){
+wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
+specs = TRUE
+rec_ssn = c("05-01","10-31")
+irg_ssn = c("05-15","10-15")
+plot_it=FALSE 
+overwrite=FALSE
+
+calcLoadings <- function(wb_path, 
+                         specs = TRUE,
+                         rec_ssn = c("05-01","10-31"),
+                         irg_ssn = c("05-15","10-15"),
+                         geom_crit,
+                         max_crit, 
+                         mos = .1, 
+                         cf=1000/100*28.3168*3600*24, 
+                         plot_it=FALSE, 
+                         overwrite=FALSE){
   
   ## Calculation functions needed for plotting and assessment ## 
   gmean=function(x){exp(mean(log(x)))} # geometric mean
-  gsd=function(x){exp(sd(log(x)))} # standard deviation of the geometric mean - shows spread in the data
   perc.red <- function(x,y){100-x/y*100} # percent reduction equation where x = capacity and y = observed
   flow_perc <- function(x){(1-percent_rank(x))*100} # gives each flow measurement a percent rank (what percentage of flows are higher than value?)
   
@@ -69,10 +86,13 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
   ecoli.dat$ML_Name = trimws(ecoli.dat$ML_Name)
   
   # Take geometric mean over same site/day samples
+  if(!length(unique(ecoli.dat$ML_Name))== length(unique(ecoli.dat$MLID))){
+    warning("Monitoring location names are not specific to MLID's. Function will calculate separate daily geomeans for each ML_Name/MLID combination")
+  }
   ecoli.day.gmean <- aggregate(E.coli~Date+ML_Name+MLID, data=ecoli.dat, FUN=function(x){exp(mean(log(x)))})
   names(ecoli.day.gmean)[names(ecoli.day.gmean)=="E.coli"] <- "E.coli_Geomean"
   
-  # Determine season for LDC - taken from https://stackoverflow.com/questions/9500114/find-which-season-a-particular-date-belongs-to
+  # Determine calendar season for LDC - taken from https://stackoverflow.com/questions/9500114/find-which-season-a-particular-date-belongs-to
   getSeason <- function(DATES) {
     WS <- as.Date("2012-12-15", format = "%Y-%m-%d") # Winter Solstice
     SE <- as.Date("2012-3-15",  format = "%Y-%m-%d") # Spring Equinox
@@ -84,7 +104,15 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
             ifelse (d >= SE & d < SS, "Spring",
                     ifelse (d >= SS & d < FE, "Summer", "Fall")))}
   
-  ecoli.day.gmean$Season <- getSeason(ecoli.day.gmean$Date)
+  ecoli.day.gmean$CalSeason <- getSeason(ecoli.day.gmean$Date)
+  
+  # Determine if each point falls within the rec season
+  rec_ssn1 = yday(as.Date(rec_ssn, "%m-%d"))
+  ecoli.day.gmean$Rec_Season = ifelse(yday(ecoli.day.gmean$Date)>=rec_ssn1[1]&yday(ecoli.day.gmean$Date)<=rec_ssn1[2],"Rec Season","Not Rec Season")
+  
+  # Determine if each point falls within the irrigation season
+  irg_ssn1 = yday(as.Date(irg_ssn, "%m-%d"))
+  ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn1[1]&yday(ecoli.day.gmean$Date)<=irg_ssn1[2],"Irrigation Season","Not Irrigation Season")
   
   # Write daily geometric mean data to new datasheet 
   if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
@@ -95,21 +123,20 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
   
   ## Create loading dataset
   ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
-  
-  # LDC calc function
+  ecoli.flow.dat$Loading_Capacity <- ecoli.flow.dat$Flow*geom_crit*cf
+  ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
+  ecoli.flow.dat$Observed_Loading <- ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf
+  ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$Loading_Capacity_MOS,"yes","no")
+
+   # Flow Percentile calc function
   ldc_func <- function(x){
-    # Calculate loadings
-    x$Loading_Capacity <- x$Flow*geom_crit*cf
-    x$Loading_Capacity_MOS <- x$Loading_Capacity*(1-mos)
-    x$Observed_Loading <- x$Flow*x$E.coli_Geomean*cf
-    x$Exceeds <- ifelse(x$Observed_Loading>x$Loading_Capacity_MOS,"yes","no")
     x$Flow_Percentile = flow_perc(x$Flow)
     out = x
     return(out)
     }
   
-  # Apply LDC calc to data
-  ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID), .fun=ldc_func)
+  # Apply percentile calc to data
+  ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
   
   # Write load duration curve data to new datasheet 
   if(!any(wb.dat$sheet_names=="LDC_Data")){
@@ -133,13 +160,12 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
     writeData(wb.dat, sheet = "Monthly_Data", mo_load, rowNames = FALSE)}
  
  
-  ## Filter to Rec Season ##
-  ecoli.ldc.rec <- ecoli.ldc[month(ecoli.ldc$Date)>4&month(ecoli.ldc$Date)<10,]
-  ecoli.ldc.rec$year <- year(ecoli.ldc.rec$Date)
+  ## Rec Season Geomeans ##
   
   # Aggregate by geometric mean
-  ol_rec <- aggregate(Observed_Loading~year+MLID+ML_Name, dat=ecoli.ldc.rec, FUN=gmean)
-  lcmos_rec <- aggregate(Loading_Capacity_MOS~year+MLID+ML_Name, dat=ecoli.ldc.rec, FUN=gmean)
+  ecoli.ldc$Year = year(ecoli.ldc$Date)
+  ol_rec <- aggregate(Observed_Loading~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
+  lcmos_rec <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
   rec <- merge(ol_rec,lcmos_rec, all=TRUE)
   rec$Percent_Reduction <- ifelse(rec$Observed_Loading>rec$Loading_Capacity_MOS,round(perc.red(rec$Loading_Capacity_MOS,rec$Observed_Loading), digits=0),0)
   
@@ -148,6 +174,20 @@ calcLoadings <- function(wb_path, specs = TRUE, geom_crit,max_crit, mos = .1, cf
   if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
     addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
     writeData(wb.dat, sheet = "Rec_Season_Data", rec, rowNames = FALSE)}
+  
+  ## Irrigation Season Geomeans ##
+  
+  # Aggregate by geometric mean
+  ol_irg <- aggregate(Observed_Loading~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+  lcmos_irg <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+  irg <- merge(ol_irg,lcmos_irg, all=TRUE)
+  irg$Percent_Reduction <- ifelse(irg$Observed_Loading>irg$Loading_Capacity_MOS,round(perc.red(irg$Loading_Capacity_MOS,irg$Observed_Loading), digits=0),0)
+  
+  
+  # Write monthly data to new datasheet 
+  if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
+    addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
+    writeData(wb.dat, sheet = "Irg_Season_Data", irg, rowNames = FALSE)}
   
   ############################ SAVE WORKBOOK FILE WITH NEW SHEETS #########################
   if(overwrite){
