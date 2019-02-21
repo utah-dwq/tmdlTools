@@ -30,13 +30,12 @@ library(dplyr)
 library(shiny)
 
 ### TESTING ####
-# calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Spring_Creek.xlsx", specs=TRUE, geom_crit = 206, max_crit = 668, mos = 0.1, plot_it = FALSE, run_shiny = FALSE, overwrite = FALSE)
+calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
 # 
-wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
+wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow.xlsx"
 specs = TRUE
 rec_ssn = c("05-01","10-31")
 irg_ssn = c("05-15","10-15")
-plot_it=FALSE 
 overwrite=FALSE
 
 calcLoadings <- function(wb_path, 
@@ -59,8 +58,12 @@ calcLoadings <- function(wb_path,
   wb.dat <- loadWorkbook(wb_path)
   ecoli.dat <- readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
   ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
-  flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
-  flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30")
+  if("Flow_data"%in%wb.dat$sheet_names){
+    flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
+    flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30") 
+    flo.dat = TRUE
+  }else{flo.dat=FALSE}
+
   
   ### Obtain criteria from specs.dat sheet or function inputs ###
   # If xlsx workbook contains worksheet "Inputs", then pull criteria and other inputs from that... 
@@ -115,94 +118,110 @@ calcLoadings <- function(wb_path,
   ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn1[1]&yday(ecoli.day.gmean$Date)<=irg_ssn1[2],"Irrigation Season","Not Irrigation Season")
   
   # Write daily geometric mean data to new datasheet 
-  if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
+    if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
     addWorksheet(wb.dat, "Daily_Geomean_Data", gridLines = TRUE)
     writeData(wb.dat, sheet = "Daily_Geomean_Data", ecoli.day.gmean, rowNames = FALSE)}
   
-  ###### LOAD DURATION CALCULATIONS, MONTHLY LOADS/REC SEASON AND PERC REDUCTION #######
-  
-  ## Create loading dataset
-  ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
-  ecoli.flow.dat$Loading_Capacity <- ecoli.flow.dat$Flow*geom_crit*cf
-  ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
-  ecoli.flow.dat$Observed_Loading <- ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf
-  ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$Loading_Capacity_MOS,"yes","no")
-
-   # Flow Percentile calc function
-  ldc_func <- function(x){
-    x$Flow_Percentile = flow_perc(x$Flow)
-    out = x
-    return(out)
+  ###### LOAD DURATION CALCULATIONS, MONTHLY LOADS/REC SEASON/IRG SEASON AND PERC REDUCTION #######
+  if(flo.dat){
+    ## Create loading dataset
+    ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
+    ecoli.flow.dat$Loading_Capacity <- ecoli.flow.dat$Flow*geom_crit*cf
+    ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
+    ecoli.flow.dat$Observed_Loading <- ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf
+    ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$Loading_Capacity_MOS,"yes","no")
+    
+    # Flow Percentile calc function
+    ldc_func <- function(x){
+      x$Flow_Percentile = flow_perc(x$Flow)
+      out = x
+      return(out)
     }
-  
-  # Apply percentile calc to data
-  ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
-  
-  # Write load duration curve data to new datasheet 
-  if(!any(wb.dat$sheet_names=="LDC_Data")){
-    addWorksheet(wb.dat, "LDC_Data", gridLines = TRUE)
-    writeData(wb.dat, sheet = "LDC_Data", ldc.dat, rowNames = FALSE)}
-  
-  # Continue forward with loadings only for records with E.coli concentrations
-  ecoli.ldc <- ldc.dat[!is.na(ldc.dat$E.coli_Geomean),]
-  
-  ## Loading by month ##
-  ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
-  ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
-  lc_mo <- aggregate(Loading_Capacity_MOS~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
-  mo_load <- merge(ol_mo,lc_mo, all=TRUE)
-  mo_load <- mo_load[order(mo_load$month),]
-  mo_load$Percent_Reduction <- ifelse(mo_load$Observed_Loading>mo_load$Loading_Capacity_MOS,round(perc.red(mo_load$Loading_Capacity_MOS,mo_load$Observed_Loading), digits=0),0)
-  
-  # Write monthly data to new datasheet 
-  if(!any(wb.dat$sheet_names=="Monthly_Data")){
-    addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
-    writeData(wb.dat, sheet = "Monthly_Data", mo_load, rowNames = FALSE)}
+    
+    # Apply percentile calc to data
+    ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
+    
+    # Write load duration curve data to new datasheet 
+    if(!any(wb.dat$sheet_names=="LDC_Data")){
+      addWorksheet(wb.dat, "LDC_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "LDC_Data", ldc.dat, rowNames = FALSE)
+    }  
+
+    # Continue forward with loadings only for records with E.coli concentrations
+    ecoli.ldc <- ldc.dat[!is.na(ldc.dat$E.coli_Geomean),]
+    
+    ## Loading by month ##
+    ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
+    ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
+    lc_mo <- aggregate(Loading_Capacity_MOS~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
+    mo_load <- merge(ol_mo,lc_mo, all=TRUE)
+    mo_load <- mo_load[order(mo_load$month),]
+    mo_load$Percent_Reduction_L <- ifelse(mo_load$Observed_Loading>mo_load$Loading_Capacity_MOS,round(perc.red(mo_load$Loading_Capacity_MOS,mo_load$Observed_Loading), digits=0),0)
+    
+    ## Loading by rec season ##
+    ecoli.ldc$Year = year(ecoli.ldc$Date)
+    ol_rec <- aggregate(Observed_Loading~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
+    lcmos_rec <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
+    rec_load <- merge(ol_rec,lcmos_rec, all=TRUE)
+    rec_load$Percent_Reduction_L <- ifelse(rec_load$Observed_Loading>rec_load$Loading_Capacity_MOS,round(perc.red(rec_load$Loading_Capacity_MOS,rec_load$Observed_Loading), digits=0),0)
+    
+    ## Loading by irrigation season ##
+    ol_irg <- aggregate(Observed_Loading~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+    lcmos_irg <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+    irg_load <- merge(ol_irg,lcmos_irg, all=TRUE)
+    irg_load$Percent_Reduction_L <- ifelse(irg_load$Observed_Loading>irg_load$Loading_Capacity_MOS,round(perc.red(irg_load$Loading_Capacity_MOS,irg_load$Observed_Loading), digits=0),0)
+    
+  }else{mo_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))
+        rec_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))
+        irg_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))}
+
+  ## Concentration by month ##
+    ecoli.day.gmean$month <- month(ecoli.day.gmean$Date, label=TRUE)
+    concen_mo <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    concen_mo$Percent_Reduction_C <- ifelse(concen_mo$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_mo$E.coli_Geomean), digits=0),0)
+    
+  ## Concentration by rec season ##
+    concen_rec <- aggregate(E.coli_Geomean~Rec_Season+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    concen_rec$Percent_Reduction_C <- ifelse(concen_rec$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_rec$E.coli_Geomean), digits=0),0)
+
+  ## Concentration by irrigation season ##
+    concen_irg <- aggregate(E.coli_Geomean~Irg_Season+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    concen_irg$Percent_Reduction_C <- ifelse(concen_irg$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_irg$E.coli_Geomean), digits=0),0)
+
+  # Merge monthly data and write to new datasheet 
+    month.dat = merge(concen_mo,mo_load, all=TRUE)
+    
+    if(!any(wb.dat$sheet_names=="Monthly_Data")){
+      addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Monthly_Data", month.dat, rowNames = FALSE)}
  
- 
-  ## Rec Season Geomeans ##
+  # Merge rec season data and write to new datasheet
+    rec.dat = merge(rec_load,concen_rec, all=TRUE)
+    
+    if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
+      addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Rec_Season_Data", rec.dat, rowNames = FALSE)}
   
-  # Aggregate by geometric mean
-  ecoli.ldc$Year = year(ecoli.ldc$Date)
-  ol_rec <- aggregate(Observed_Loading~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
-  lcmos_rec <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
-  rec <- merge(ol_rec,lcmos_rec, all=TRUE)
-  rec$Percent_Reduction <- ifelse(rec$Observed_Loading>rec$Loading_Capacity_MOS,round(perc.red(rec$Loading_Capacity_MOS,rec$Observed_Loading), digits=0),0)
+  # Merge irrigation season data and write to new datasheet
+    irg.dat = merge(irg_load, concen_irg, all=TRUE)
   
-  
-  # Write monthly data to new datasheet 
-  if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
-    addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
-    writeData(wb.dat, sheet = "Rec_Season_Data", rec, rowNames = FALSE)}
-  
-  ## Irrigation Season Geomeans ##
-  
-  # Aggregate by geometric mean
-  ol_irg <- aggregate(Observed_Loading~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
-  lcmos_irg <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
-  irg <- merge(ol_irg,lcmos_irg, all=TRUE)
-  irg$Percent_Reduction <- ifelse(irg$Observed_Loading>irg$Loading_Capacity_MOS,round(perc.red(irg$Loading_Capacity_MOS,irg$Observed_Loading), digits=0),0)
-  
-  
-  # Write monthly data to new datasheet 
-  if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
-    addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
-    writeData(wb.dat, sheet = "Irg_Season_Data", irg, rowNames = FALSE)}
+    if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
+      addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Irg_Season_Data", irg.dat, rowNames = FALSE)}
   
   ############################ SAVE WORKBOOK FILE WITH NEW SHEETS #########################
   if(overwrite){
     saveWorkbook(wb.dat, wb_path, overwrite = TRUE)
-  }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)
-        }
+  }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)}
 
   
-  ############################## PLOTTING USING FUNCTIONS ABOVE ###################
-  if(plot_it){
-    by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=TRUE, wndws=FALSE) # time series plots
-    by(ldc.dat,ldc.dat[,"MLID"],plotLDC, wndws=FALSE) # load duration curves
-    by(mo_load,mo_load[,"MLID"],plotMonthlyLoads, wndws=FALSE) # monthly loadings
-    by(rec,rec[,"MLID"],plotRecSeasonLoads, wndws=FALSE) # rec season loadings by year
-  }
+  # ############################## PLOTTING USING FUNCTIONS ABOVE ###################
+  # if(plot_it){
+  #   by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=TRUE, wndws=FALSE) # time series plots
+  #   by(ldc.dat,ldc.dat[,"MLID"],plotLDC, wndws=FALSE) # load duration curves
+  #   by(mo_load,mo_load[,"MLID"],plotMonthlyLoads, wndws=FALSE) # monthly loadings
+  #   by(rec,rec[,"MLID"],plotRecSeasonLoads, wndws=FALSE) # rec season loadings by year
+  # }
 
 }
 
