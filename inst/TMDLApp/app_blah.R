@@ -61,7 +61,7 @@ ui <- fluidPage(
              h5("Quartiles: The lower whisker of the boxplot represents the lowest value, excluding outliers, while the upper whisker represents the highest value, excluding outliers. The top and bottom edges of the box indicate the 75th and 25th percentiles, respectively. Boxes without whiskers indicate only 2 data points exist, and median lines without a box indicate only 1 data point exists."),
              hr(),
              plotOutput("Monthly_Geomeans", height="700px")),
-    tabPanel("Rec/Non-Rec Season",
+    tabPanel("RecNon-Rec Season",
              selectInput("site3",
                          label = "Site Name",
                          choices=c(unique(rec.dat$ML_Name))),
@@ -69,11 +69,10 @@ ui <- fluidPage(
              checkboxInput("medplot1", label = "View Medians and Quartiles"),
              hr(),
              plotOutput("Rec_Geomeans", height="700px")),
-    tabPanel("Irrigation/Non-Irrigation Season",
+    tabPanel("IrrigationNon-Irrigation Season",
              selectInput("site4",
                          label = "Site Name",
                          choices=c(unique(irg.dat$ML_Name))),
-             uiOutput("unit_type1"),
              checkboxInput("medplot1", label = "View Medians and Quartiles"),
              hr(),
              plotOutput("Rec_Geomeans", height="700px")),
@@ -169,8 +168,8 @@ server <- function(input, output) {
     subd[subd=="Observed_Loading"]<- "Loading"
     subd[subd=="E.coli_Geomean"]<- "Concentration"
     selectInput("unit_type","Select Measurement Type", choices = subd, selected = subd[1])
-    
-  })  
+
+  })
   
     output$Monthly_Geomeans <- renderPlot({
        
@@ -219,15 +218,15 @@ server <- function(input, output) {
 
      })
    
-    # output$unit_type1 <- renderUI({
-    #   subdat1 = colnames(rec.dat[rec.dat$ML_Name==input$site3,])
-    #   subd1 = subdat1[subdat1%in%c("Observed_Loading","E.coli_Geomean")]
-    #   subd1[subd1=="Observed_Loading"]<- "Loading"
-    #   subd1[subd1=="E.coli_Geomean"]<- "Concentration"
-    #   selectInput("unit_type1","Select Measurement Type", choices = subd1, selected = subd1[1])
-    #   
-    # })
-    # 
+    output$unit_type1 <- renderUI({
+      subdat1 = colnames(rec.dat[rec.dat$ML_Name==input$site3,])
+      subd1 = subdat1[subdat1%in%c("Observed_Loading","E.coli_Geomean")]
+      subd1[subd1=="Observed_Loading"]<- "Loading"
+      subd1[subd1=="E.coli_Geomean"]<- "Concentration"
+      selectInput("unit_type1","Select Measurement Type", choices = subd1, selected = subd1[1])
+
+    })
+
     output$Rec_Geomeans <- renderPlot({
        # Obtain boxplot stats from loading data
        y <- loading.dat[loading.dat$ML_Name==input$site3,c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
