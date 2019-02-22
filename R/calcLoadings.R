@@ -20,23 +20,23 @@
 #' @importFrom openxlsx saveWorkbook
 #' @importFrom lubridate year
 #' @importFrom lubridate month
-#' @importFrom plyr ddply
+#' @import plyr
 #' @import shiny
 
-library(openxlsx)
-library(lubridate)
-library(plyr)
-library(dplyr)
-library(shiny)
+# library(openxlsx)
+# library(lubridate)
+# library(plyr)
+# library(dplyr)
+# library(shiny)
 
 ### TESTING ####
-calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
-# 
-wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow.xlsx"
-specs = TRUE
-rec_ssn = c("05-01","10-31")
-irg_ssn = c("05-15","10-15")
-overwrite=FALSE
+# calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
+# # 
+# wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow.xlsx"
+# specs = TRUE
+# rec_ssn = c("05-01","10-31")
+# irg_ssn = c("05-15","10-15")
+# overwrite=FALSE
 
 calcLoadings <- function(wb_path, 
                          specs = TRUE,
