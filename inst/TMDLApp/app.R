@@ -161,7 +161,7 @@ server <- function(input, output) {
     l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1) 
    })
 
-   output$LDC <- renderPlot({
+  output$LDC <- renderPlot({
      req(input$pt_type)
      x <- loading.dat[loading.dat$ML_Name==input$site1,]
      flow.plot <- x[order(x$Flow_Percentile),]
@@ -221,7 +221,7 @@ server <- function(input, output) {
      }
      })
 
-     output$Monthly_Geomeans <- renderPlot({
+  output$Monthly_Geomeans <- renderPlot({
        req(input$unit_type)
        if(input$unit_type=="Concentration"){
          # Obtain boxplot stats from loading data
@@ -305,7 +305,7 @@ server <- function(input, output) {
 
      })
      
-     output$Rec_Geomeans <- renderPlot({
+  output$Rec_Geomeans <- renderPlot({
        req(input$unit_type1)
        if(input$unit_type1=="Concentration"){
          # Obtain boxplot stats from loading data
@@ -414,9 +414,9 @@ server <- function(input, output) {
          
        }
        
-     }, width = 900, height = 600)
+     })
      
-    output$Irg_Geomeans <- renderPlot({
+  output$Irg_Geomeans <- renderPlot({
       
     })
 }
