@@ -270,13 +270,14 @@ server <- function(input, output) {
       datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
       
       # Straight bar plots
+      cols = piratepal(palette="up")
       x <- month.dat[month.dat$ML_Name==input$site2,]
       x = x[complete.cases(x),]
       rownames(x) <- x$month
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
       mo_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
-      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans", ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c("firebrick3","dodgerblue3"))
-      legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=1)
+      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans", ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+      legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
       box(bty="l")
       barps <- barp[1,]
       barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
@@ -292,8 +293,8 @@ server <- function(input, output) {
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1), ylab="E.coli Loading (MPN/day)",col=c("firebrick3","dodgerblue3"))
-        legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c("firebrick3","dodgerblue3",NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
+        barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+        legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
         box(bty="l")
         
         # x-axis arguments for boxplot based on barplot placement
@@ -301,7 +302,7 @@ server <- function(input, output) {
         ax_spots = ax[order(ax)]
         
         boxplot(datstack$Loading~datstack$Meas_Type+lubridate::month(datstack$Date),
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c("firebrick3", "dodgerblue3"),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(cols[1],cols[2]),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
       }}
 
      })
@@ -310,35 +311,62 @@ server <- function(input, output) {
        req(input$unit_type1)
        if(input$unit_type1=="Concentration"){
          # Obtain boxplot stats from loading data
-         y <- ecoli.dat[ecoli.dat$ML_Name==input$site2,c("MLID","ML_Name","Rec_Season","E.coli_Geomean")]
+         y <- ecoli.dat[ecoli.dat$ML_Name==input$site3,c("MLID","Date","ML_Name","Rec_Season","E.coli_Geomean")]
+         y$Year = lubridate::year(y$Date)
+         y$Rec_Season[y$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
          
          # Straight bar plot - concentrations
-         x <- rec.dat[rec.dat$ML_Name==input$site2,]
+         x <- rec.dat[rec.dat$ML_Name==input$site3,]
+         x$Rec_Season[x$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
+         x = x[order(x$Year),]
          uplim = max(x$E.coli_Geomean)*1.2
-         rec_conc.p <- x$E.coli_Geomean
-         barp <- barplot(rec_conc.p, main = "Rec Season E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$Rec_Season,ylab="E.coli Concentration (MPN/100 mL)",col=c("dodgerblue3","firebrick3"))
+         recstack <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "E.coli_Geomean")
+         rownames(recstack) = recstack$Year
+         recstack1 = recstack[,!names(recstack)%in%"Year"]
+         recstack1 = recstack1[,c("Rec Season","zNotRec")]
+         rec_conc <- barplot(t(recstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colorspace::rainbow_hcl(2))
+         legend("topright",legend=c("Rec Season", "Not Rec Season"), bty="n", fill=c(rainbow_hcl(2)), border="black",cex=1)
+         box(bty="l")
          abline(h=geom_crit, col="black", lwd=2)
-         barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction_C))
-         barperc <- barperc[barperc$X3>0,]
-         if(dim(barperc)[1]>0){
-           barperc$X4 <- paste(barperc$X3,"%",sep="")
-           text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1) 
+         
+         # Label bars that exceed
+         # Get percent reductions
+         perc_lab <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "Percent_Reduction_C")
+         perc_labs = melt(perc_lab, id.vars = c("Year"), value.vars = c("zNotRec", "Rec Season"))
+         perc_labs = perc_labs[order(perc_labs$Year),]
+         
+         # Get height of bars
+         perc_y = melt(recstack, id.vars = c("Year"), value.vars = c("zNotRec", "Rec Season"), value.name = "value1")
+         perc_y = perc_y[order(perc_y$Year),]
+         
+         percs <- merge(perc_labs,perc_y, all=TRUE) 
+         percs = percs[order(percs$Year),]
+         
+         # Get x pos of bars
+         perc_at = c(rec_conc[1,],rec_conc[2,])
+         perc_at = perc_at[order(perc_at)]
+         recperc <- data.frame(perc_at,percs)
+         recperc1 <- recperc[recperc$value>0&!is.na(recperc$value),]
+         if(dim(recperc1)[1]>0){
+           recperc1$percn <- paste(recperc1$value,"%",sep="")
+           text(recperc1$perc_at,recperc1$value1+0.1*mean(recperc1$value1),labels=recperc1$percn,cex=1) 
          }
+
          if(input$medplot1){
            # Get axes right to accommodate boxplot overlay (if checkbox checked)
            uplim1 = quantile(y$E.coli_Geomean,1)
            uplim1 = max(uplim, uplim1)
            
            # Bar plot
-           barp <- barplot(rec_conc.p, main = "Rec Season E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$Rec_Season, ylab="E.coli Concentration (MPN/100 mL)",col=c("dodgerblue3","firebrick3"))
+           barplot(t(recstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colorspace::rainbow_hcl(2))
            abline(h=geom_crit, col="black", lty=2, lwd=2)
            legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
            box(bty="l")
            
            # x-axis arguments for boxplot based on barplot placement
-           
-           boxplot(y$E.coli_Geomean~y$Rec_Season,
-                   lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c("dodgerblue3","firebrick3"),0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
+           boxat = recperc[,"perc_at"]
+           boxplot(y$E.coli_Geomean~y$Rec_Season+y$Year,
+                   lty=1, xaxt="n",yaxt="n", frame=FALSE, col=ggplot2::alpha(c(rainbow_hcl(2)),0.1), boxwex = 0.7, at=boxat, add=TRUE)
          }
        }
        if(input$unit_type1=="Loading"){

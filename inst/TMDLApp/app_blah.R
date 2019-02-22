@@ -309,7 +309,6 @@ server <- function(input, output) {
   updateSite_C = reactive({
     x = rec.dat[rec.dat$ML_Name==input$site2,] 
     uplim = max(x$E.coli_Geomean)*1.2
-    rec_conc.p <- x$E.coli_Geomean
     if(input$medplot1){
       y = ecoli.dat[ecoli.dat$ML_Name==input$site2,]
       y = y[,c("MLID","ML_Name","Rec_Season","E.coli_Geomean")]
@@ -340,14 +339,41 @@ server <- function(input, output) {
     req(input$unit_type1)
     if(input$unit_type1=="Concentration"){
       updateSite_C()
-      barp <- barplot(rec_conc.p, main = "Rec Season E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$Rec_Season,ylab="E.coli Concentration (MPN/100 mL)",col=c("dodgerblue3","firebrick3"))
+      y <- ecoli.dat[ecoli.dat$ML_Name==input$site2,c("MLID","ML_Name","Rec_Season","E.coli_Geomean")]
+      # Straight bar plot - concentrations
+      x = dplyr::arrange(x,Year,desc(Rec_Season))
+      recstack <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "E.coli_Geomean")
+      rownames(recstack) = recstack$Year
+      recstack1 = recstack[,!names(recstack)%in%"Year"]
+      recstack1 = recstack1[,c("Rec Season","Not Rec Season")]
+      rec_conc <- barplot(t(recstack1), beside=TRUE, las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colorspace::rainbow_hcl(2))
+      box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
-      barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction_C))
-      barperc <- barperc[barperc$X3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$X4 <- paste(barperc$X3,"%",sep="")
-        text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1) 
+      
+      # Label bars that exceed
+      # Get percent reductions
+      perc_lab <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "Percent_Reduction_C")
+      perc_labs = melt(perc_lab, id.vars = c("Year"), value.vars = c("Not Rec Season", "Rec Season"))
+      perc_labs = perc_labs[order(perc_labs$Year),]
+      
+      # Get height of bars
+      perc_y = melt(recstack, id.vars = c("Year"), value.vars = c("Not Rec Season", "Rec Season"), value.name = "value1")
+      perc_y = perc_y[order(perc_y$Year),]
+      
+      percs <- merge(perc_labs,perc_y, all=TRUE) 
+      percs = dplyr::arrange(percs,Year,desc(variable))
+      
+      # Get x pos of bars
+      perc_at = c(rec_conc[1,],rec_conc[2,])
+      perc_at = perc_at[order(perc_at)]
+      recperc <- data.frame(perc_at,percs)
+      recperc1 <- recperc[recperc$value>0&!is.na(recperc$value),]
+      if(dim(recperc1)[1]>0){
+        recperc1$percn <- paste(recperc1$value,"%",sep="")
+        text(recperc1$perc_at,recperc1$value1+0.1*mean(recperc1$value1),labels=recperc1$percn,cex=1) 
       }
+      
+      
       if(input$medplot1){
         updateSite_C()
         # Bar plot
