@@ -18,8 +18,7 @@
 #' @importFrom openxlsx addWorksheet
 #' @importFrom openxlsx writeData
 #' @importFrom openxlsx saveWorkbook
-#' @importFrom lubridate year
-#' @importFrom lubridate month
+#' @import lubridate
 #' @import plyr
 #' @import shiny
 
