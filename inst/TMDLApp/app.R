@@ -1,6 +1,6 @@
 ################## SHINY APP ##########################################
 
-# wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-21.xlsx"
+#wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-21.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -114,7 +114,7 @@ server <- function(input, output) {
   output$unit_type1 <- renderUI({
     subdat = rec.dat[rec.dat$ML_Name==input$site3&!is.na(rec.dat$Observed_Loading),"Observed_Loading"]
     if(length(subdat)>0){
-      subd=c("Loading","Concentration")
+      subd=c("Concentration","Loading")
     }else{subd=c("Concentration")}
     selectInput("unit_type1","Select Measurement Type", choices = subd, selected = subd[1])
     
@@ -123,7 +123,7 @@ server <- function(input, output) {
   output$unit_type2 <- renderUI({
     subdat = irg.dat[irg.dat$ML_Name==input$site4&!is.na(irg.dat$Observed_Loading),"Observed_Loading"]
     if(length(subdat)>0){
-      subd=c("Loading","Concentration")
+      subd=c("Concentration","Loading")
     }else{subd=c("Concentration")}
     selectInput("unit_type2","Select Measurement Type", choices = subd, selected = subd[1])
     
@@ -317,7 +317,6 @@ server <- function(input, output) {
          uplim = max(x$E.coli_Geomean)*1.2
          rec_conc.p <- x$E.coli_Geomean
          barp <- barplot(rec_conc.p, main = "Rec Season E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$Rec_Season,ylab="E.coli Concentration (MPN/100 mL)",col=c("dodgerblue3","firebrick3"))
-         box(bty="l")
          abline(h=geom_crit, col="black", lwd=2)
          barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction_C))
          barperc <- barperc[barperc$X3>0,]
@@ -353,6 +352,7 @@ server <- function(input, output) {
          
          # Straight bar plots
          x <- rec.dat[rec.dat$ML_Name==input$site2,]
+         print(x)
          x = x[complete.cases(x),]
          x = x[order(x$Year),]
          uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
@@ -410,8 +410,7 @@ server <- function(input, output) {
            
            boxplot(datstack$Loading[datstack$Rec_Season=="Not Rec Season"]~datstack$Meas_Type[datstack$Rec_Season=="Not Rec Season"]+lubridate::year(datstack$Date)[datstack$Rec_Season=="Not Rec Season"],
                    lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c("firebrick3", "dodgerblue3"),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-           
-           
+
          }
          
        }

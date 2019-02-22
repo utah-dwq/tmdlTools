@@ -14,6 +14,7 @@
 #' @import colorspace
 #' @importFrom yarrr piratepal
 #' @importFrom reshape2 melt
+#' @importFrom ggplot2 alpha
 
 
 

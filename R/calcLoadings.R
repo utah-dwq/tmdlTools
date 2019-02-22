@@ -176,16 +176,17 @@ calcLoadings <- function(wb_path,
         irg_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))}
 
   ## Concentration by month ##
-    ecoli.day.gmean$month <- month(ecoli.day.gmean$Date, label=TRUE)
+    ecoli.day.gmean$month <- lubridate::month(ecoli.day.gmean$Date, label=TRUE)
     concen_mo <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
     concen_mo$Percent_Reduction_C <- ifelse(concen_mo$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_mo$E.coli_Geomean), digits=0),0)
     
   ## Concentration by rec season ##
-    concen_rec <- aggregate(E.coli_Geomean~Rec_Season+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    ecoli.day.gmean$Year <- lubridate::year(ecoli.day.gmean$Year)
+    concen_rec <- aggregate(E.coli_Geomean~Rec_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=gmean)
     concen_rec$Percent_Reduction_C <- ifelse(concen_rec$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_rec$E.coli_Geomean), digits=0),0)
 
   ## Concentration by irrigation season ##
-    concen_irg <- aggregate(E.coli_Geomean~Irg_Season+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    concen_irg <- aggregate(E.coli_Geomean~Irg_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=gmean)
     concen_irg$Percent_Reduction_C <- ifelse(concen_irg$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_irg$E.coli_Geomean), digits=0),0)
 
   # Merge monthly data and write to new datasheet 
