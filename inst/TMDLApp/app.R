@@ -99,7 +99,7 @@ server <- function(input, output) {
   })
   
   observeEvent(input$reset_input,{
-    reset("date")
+    shinyjs::reset("date")
   })
   
   output$unit_type <- renderUI({
