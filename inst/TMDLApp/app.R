@@ -317,6 +317,7 @@ server <- function(input, output) {
          uplim = max(x$E.coli_Geomean)*1.2
          rec_conc.p <- x$E.coli_Geomean
          barp <- barplot(rec_conc.p, main = "Rec Season E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$Rec_Season,ylab="E.coli Concentration (MPN/100 mL)",col=c("dodgerblue3","firebrick3"))
+         box(bty="l")
          abline(h=geom_crit, col="black", lwd=2)
          barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction_C))
          barperc <- barperc[barperc$X3>0,]
@@ -359,7 +360,6 @@ server <- function(input, output) {
          rownames(rec_load.p)= rec_load.p$Year
          rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c("firebrick3","dodgerblue3"))
-         legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=1)
          box(bty="l")
          barps <- barp[1,]
          barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Rec Season"]))
@@ -373,6 +373,7 @@ server <- function(input, output) {
          rownames(nrec_load.p)= nrec_load.p$Year
          nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]  
          barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), col=c("firebrick3","dodgerblue3"))
+         legend("topright",legend=c("Observed Loading","Loading Capacity", "Percent Reduction Needed"), bty="n", fill=c("firebrick3","dodgerblue3","white"), border=c("black","black","white"),cex=1)
          box(bty="l")
          barps <- barp[1,]
          barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Not Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Not Rec Season"]))
@@ -390,7 +391,6 @@ server <- function(input, output) {
            # Bar plot
            par(mfrow=c(1,2))
            barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], ylab="E.coli Loading (MPN/day)",col=c("firebrick3","dodgerblue3"))
-           legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c("firebrick3","dodgerblue3",NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
            box(bty="l")
            # x-axis arguments for boxplot based on barplot placement
            ax <- c(barp[1,],barp[2,])
@@ -401,6 +401,7 @@ server <- function(input, output) {
            
            
            barp <- barplot(t(nrec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Not Rec Season"], col=c("firebrick3","dodgerblue3"))
+           legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c("firebrick3","dodgerblue3",NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
            box(bty="l")
            
            # x-axis arguments for boxplot based on barplot placement
