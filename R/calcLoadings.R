@@ -13,6 +13,7 @@
 #' @param run_shiny Logical. If TRUE, launches shiny app browser where user can toggle between sites within the E.coli dataset.
 #' @param overwrite Logical. If TRUE, function updates input .xlsx file. If FALSE, function writes a new workbook with the name of the original file plus today's date.xlsx.
 #' @export calcLoadings
+#' @importFrom dplyr percent_rank
 #' @importFrom openxlsx loadWorkbook
 #' @importFrom openxlsx readWorkbook
 #' @importFrom openxlsx addWorksheet
