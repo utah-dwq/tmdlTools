@@ -130,6 +130,7 @@ server <- function(input, output) {
   })
 
   output$Time_Series <- renderPlot({
+    req(input$checkbox)
     x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
     # Get number of sites
     uni.sites <- unique(x$ML_Name)
