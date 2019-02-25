@@ -1,6 +1,6 @@
 #' Prep data for TMDL analysis and plotting
 #' 
-#' This function takes E.coli concentration and flow data to calculating loadings on a daily, monthly, and rec-season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
+#' This function takes E.coli concentration and flow data (if applicable) to calculate geomean concentrations and loadings on a daily, monthly, rec-season, and irrigation season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
 #' @param wb_path A file path to the .xlsx file containing E.coli and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.
 #' @param specs Logical. If TRUE, uses geom_crit, max_crit, and mos from workbook. If FALSE, function requires inputs of geom_crit, max_crit, and mos.
 #' @param rec_ssn A character string defining the recreation season over which to calculate geometric means. Defaults to May 1 to October 31.
@@ -9,10 +9,8 @@
 #' @param max_crit Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.
 #' @param cf Numeric. A correction factor to convert E.coli concentrations and flow data to loadings (amount per day). Default converts MPN/100 mL and cfs to MPN/day.
 #' @param mos Numeric proportion. The percent margin of safety (as a proportion) to use when calculating percent exceedance/reduction needed.
-#' @param plot_it Logical. If TRUE, plots time series, LDC, monthly and rec geomeans in scatter and bar plots.
-#' @param run_shiny Logical. If TRUE, launches shiny app browser where user can toggle between sites within the E.coli dataset.
 #' @param overwrite Logical. If TRUE, function updates input .xlsx file. If FALSE, function writes a new workbook with the name of the original file plus today's date.xlsx.
-#' @export calcLoadings
+#' @export tmdlCalcs
 #' @importFrom dplyr percent_rank
 #' @importFrom openxlsx loadWorkbook
 #' @importFrom openxlsx readWorkbook
@@ -30,7 +28,7 @@
 # library(shiny)
 
 ### TESTING ####
-# calcLoadings(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
+# tmdlCalcs(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
 # # 
 # wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow.xlsx"
 # specs = TRUE
@@ -38,7 +36,7 @@
 # irg_ssn = c("05-15","10-15")
 # overwrite=FALSE
 
-calcLoadings <- function(wb_path, 
+tmdlCalcs <- function(wb_path, 
                          specs = TRUE,
                          rec_ssn = c("05-01","10-31"),
                          irg_ssn = c("05-15","10-15"),
@@ -46,7 +44,6 @@ calcLoadings <- function(wb_path,
                          max_crit, 
                          mos = .1, 
                          cf=1000/100*28.3168*3600*24, 
-                         plot_it=FALSE, 
                          overwrite=FALSE){
   
   ## Calculation functions needed for plotting and assessment ## 
