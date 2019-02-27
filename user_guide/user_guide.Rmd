@@ -5,7 +5,7 @@ runtime: shiny
 
 ## Welcome!
 
-Thank you for your interest in using the *E.coli* data visualization tool. Deployed as a Shiny application, this tool is intended to assist Environmental Coordinators and Managers with total maximum daily load (TMDL) development under the EPA's Clean Water Act. Study time series plots, compare between sites, and understand which sites exceed water quality standards at what time(s) of year. Peruse this guide for more information on the plots displayed and their functionality within the app.
+Thank you for your interest in using the *E.coli* data visualization tool. Deployed as a Shiny application, this tool is intended to assist Environmental Coordinators and Managers with total maximum daily load (TMDL) development under the [EPA's Clean Water Act](https://www.epa.gov/laws-regulations/summary-clean-water-act). Users may study time series plots, compare between sites, and ascertain which sites exceed water quality standards at what time(s) of year. Peruse this guide for more information on the plots displayed and their functionality within the app. Originally produced for the Utah Department of Environmental Quality's [Division of Water Quality](https://deq.utah.gov/division-water-quality).
 
 ### General Tips
 
@@ -46,6 +46,14 @@ Barplots in this tab compare annual irrigation/non-irrigation season geomeans to
 
 ### Load Duration Curves
 
-For datasets that include loading data, this tab constructs a load duration curve plot. The plot overlays *E.coli* loadings on top of loading capacities, ordered based on flow percentile. Loadings populating the left side of the graph occur at high flows, while loadings populating the right side of the graph occur at low flows. Exceedances occur when loading points occur above the loading capacity lines.
+This tab only appears when the dataset contains loading data and constructs a load duration curve plot. The plot overlays *E.coli* loadings on loading capacities, ordered based on flow percentile. Observed loading points populating the left side of the graph occur at high flows, while loadings populating the right side of the graph occur at low flows. Observed loadings are categorized as "exceeding" when they are located above the loading capacity + margin of safety (MOS) line. This is always the lower of the two lines, as it reflects the conservative approach commonly taken in [TMDL development] (https://www.epa.gov/sites/production/files/2015-07/documents/2007_08_23_tmdl_duration_curve_guide_aug2007.pdf).
 
 Use the "Data Category" drop down menu to specify whether the loading points are categorized by calendar seasons, rec/non-rec seasons, and irrigation/non-irrigation seasons. Changing the drop-down selection will change the color of the points (but not their positions!) and provides insights toward the times of year in which exceedances are observed.
+
+## Questions?
+
+Contact Elise Hinman in the Division of Water Quality, Utah Department of Environmental Quality, at ehinman@utah.gov.
+
+## Acknowledgments
+
+Huge thank you to Jake Vander Laan within the Division of Water Quality for programming tips and patience discussing all things Shiny and R. Additional gratitude goes out to Jodi Gardberg, Amy Dickey, Sandy Wingert, and Lucy Parham for feedback on the application and its usefulness in drafting TMDLs. Finally, can't miss the giant community of amateur and professional programmers on Stack Overflow and GitHub, RStudio.com and its many help forums, DataCamp, and Data Science YouTube channels.

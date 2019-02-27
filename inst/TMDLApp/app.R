@@ -1,6 +1,6 @@
 ################## SHINY APP ##########################################
 
-#wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow_2019-02-25.xlsx"
+wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -24,9 +24,9 @@ mos = specs$Value[specs$Parameter=="Margin of Safety"]
 
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(
+ui <- fluidPage(title="E.coli Data Explorer",
   titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
-  tabsetPanel(
+  tabsetPanel(id="all_the_things",
     tabPanel("Time Series",
              shinyjs::useShinyjs(),
              h3("Bacterial Concentrations Over Time by Site"),
@@ -82,23 +82,33 @@ ui <- fluidPage(
              checkboxInput("medplot2", label = strong("View Medians and Quartiles")),
              hr(),
              plotOutput("Irg_Geomeans", height="700px")),
-    tabPanel("Load Duration Curves",
-             h3("Bacterial Loadings Across Flow Regimes"),
-             selectInput("site1",
-                         label = "Site Name",
-                         choices=c(unique(loading.dat$ML_Name))),
-             selectInput("pt_type",
-                         label = "Data Category",
-                         choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
-             hr(),
-             plotOutput("LDC", width="100%", height="700px")
-    ),
     tabPanel("User Guide",
              includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  observe({
+    if(!is.null(loading.dat)){
+      insertTab(inputId="all_the_things",
+                tabPanel("Load Duration Curves",
+               h3("Bacterial Loadings Across Flow Regimes"),
+               selectInput("site1",
+                           label = "Site Name",
+                           choices=c(unique(loading.dat$ML_Name))),
+               selectInput("pt_type",
+                           label = "Data Category",
+                           choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
+               hr(),
+               plotOutput("LDC", width="100%", height="700px")
+      ), target="User Guide")
+    }
+    
+  })
+  
+  observeEvent(input$reset_input,{
+    reset("date")})
   
   output$checkbox <- renderUI({
     choice <-  unique(ecoli.dat$ML_Name)
@@ -170,6 +180,7 @@ server <- function(input, output) {
   
   output$LDC <- renderPlot({
     req(input$pt_type)
+    req(input$site1)
     x <- loading.dat[loading.dat$ML_Name==input$site1,]
     flow.plot <- x[order(x$Flow_Percentile),]
     
@@ -229,7 +240,7 @@ server <- function(input, output) {
   
   output$Monthly_Geomeans <- renderPlot({
     req(input$unit_type)
-    barcolors = rev(colorspace::sequential_hcl(12))
+    barcolors = piratepal(palette="up")
     if(input$unit_type=="Concentration"){
       # Obtain boxplot stats from loading data
       y <- ecoli.dat[ecoli.dat$ML_Name==input$site2,c("MLID","ML_Name","Date","E.coli_Geomean")]
@@ -240,7 +251,7 @@ server <- function(input, output) {
       x <- month.dat[month.dat$ML_Name==input$site2,]
       uplim = max(x$E.coli_Geomean)*1.2
       mo_conc.p <- x$E.coli_Geomean
-      barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors)
+      barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
       legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
@@ -256,7 +267,7 @@ server <- function(input, output) {
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$month, ylab="E.coli Concentration (MPN/100 mL)",col=barcolors)
+        barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$month, ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
         abline(h=geom_crit, col="black", lty=2, lwd=2)
         legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
         box(bty="l")
@@ -264,7 +275,7 @@ server <- function(input, output) {
         # x-axis arguments for boxplot based on barplot placement
         
         boxplot(y$E.coli_Geomean~y$Month,
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors,0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
+                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
       }
     }
     if(input$unit_type=="Loading"){
