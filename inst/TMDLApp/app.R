@@ -1,6 +1,6 @@
 ################## SHINY APP ##########################################
 
-wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
+wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -328,7 +328,7 @@ server <- function(input, output) {
   
   output$Rec_Geomeans <- renderPlot({
     req(input$unit_type1)
-    colucols = colorspace::rainbow_hcl(2)
+    legcols = colorspace::rainbow_hcl(2)
     if(input$unit_type1=="Concentration"){
       # Obtain boxplot stats from loading data
       y <- ecoli.dat[ecoli.dat$ML_Name==input$site3,c("MLID","Date","ML_Name","Rec_Season","E.coli_Geomean")]
@@ -341,11 +341,20 @@ server <- function(input, output) {
       x = x[order(x$Year),]
       uplim = max(x$E.coli_Geomean)*1.2
       recstack <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "E.coli_Geomean")
-      rownames(recstack) = recstack$Year
-      recstack1 = recstack[,!names(recstack)%in%"Year"]
-      recstack1 = recstack1[,c("Rec Season","zNotRec")]
-      rec_conc <- barplot(t(recstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
-      legend("topright",legend=c("Rec Season", "Not Rec Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(colucols, NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
+      present = c("Rec Season", "zNotRec")%in%colnames(recstack)
+      if(any(present==FALSE)){
+        buddies=FALSE
+        colucols = ifelse("Rec Season"%in%colnames(recstack),colorspace::rainbow_hcl(2)[1],colorspace::rainbow_hcl(2)[1])
+        recstack1 = recstack[,!names(recstack)%in%"Year"]
+      }else{
+        buddies=TRUE
+        colucols = colorspace::rainbow_hcl(2)
+        rownames(recstack) = recstack$Year
+        recstack1 = recstack[,!names(recstack)%in%"Year"]
+        recstack1 = recstack1[,c("Rec Season","zNotRec")]
+      }
+      rec_conc <- barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      legend("topright",legend=c("Rec Season", "Not Rec Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
       
@@ -363,8 +372,12 @@ server <- function(input, output) {
       percs = percs[order(percs$Year),]
       
       # Get x pos of bars
-      perc_at = c(rec_conc[1,],rec_conc[2,])
-      perc_at = perc_at[order(perc_at)]
+      if(any(present==FALSE)){
+        perc_at = rec_conc
+      }else{
+        perc_at = c(rec_conc[1,],rec_conc[2,])
+        perc_at = perc_at[order(perc_at)]
+      }
       recperc <- data.frame(perc_at,percs)
       recperc1 <- recperc[recperc$value>0&!is.na(recperc$value),]
       if(dim(recperc1)[1]>0){
@@ -378,9 +391,9 @@ server <- function(input, output) {
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barplot(t(recstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+        barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
         abline(h=geom_crit, col="black", lty=2, lwd=2)
-        legend("topright",legend=c("Rec Season","Not Rec Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
+        legend("topright",legend=c("Rec Season","Not Rec Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
         box(bty="l")
         
         # x-axis arguments for boxplot based on barplot placement
