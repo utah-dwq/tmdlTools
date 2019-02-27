@@ -53,9 +53,6 @@ ui <- fluidPage(
                       br(),
                       textInput("crit1",label = "Max Criterion",value=max_crit),
                       textInput("crit2",label = "Geomean Criterion",value=geom_crit)
-               ),
-               column(4,
-                      downloadButton("dwn1",label = "Download Plot - Not Live Yet")
                ))
     ), 
     tabPanel("Monthly",
@@ -64,9 +61,7 @@ ui <- fluidPage(
                          label = "Site Name",
                          choices=c(unique(month.dat$ML_Name))),
              uiOutput("unit_type"),
-             h5(strong("Note"),": if loading data are not available for the site, 'Loading' will not appear as an option in the 'Select Measurement Type' drop down menu."),
              checkboxInput("medplot", label = strong("View Medians and Quartiles")),
-             h5("Quartiles: The lower whisker of the boxplot represents the lowest value, excluding outliers, while the upper whisker represents the highest value, excluding outliers. The top and bottom edges of the box indicate the 75th and 25th percentiles, respectively. Boxes without whiskers indicate only 2 data points exist, and median lines without a box indicate only 1 data point exists."),
              hr(),
              plotOutput("Monthly_Geomeans", height="700px")),
     tabPanel("Rec/Non-Rec Season",
@@ -75,7 +70,6 @@ ui <- fluidPage(
                          label = "Site Name",
                          choices=c(unique(rec.dat$ML_Name))),
              uiOutput("unit_type1"),
-             h5(strong("Note"),": if loading data are not available for the site, 'Loading' will not appear as an option in the 'Select Measurement Type' drop down menu."),
              checkboxInput("medplot1", label = strong("View Medians and Quartiles")),
              hr(),
              plotOutput("Rec_Geomeans", height="700px")),
@@ -85,7 +79,6 @@ ui <- fluidPage(
                          label = "Site Name",
                          choices=c(unique(irg.dat$ML_Name))),
              uiOutput("unit_type2"),
-             h5(strong("Note"),": if loading data are not available for the site, 'Loading' will not appear as an option in the 'Select Measurement Type' drop down menu."),
              checkboxInput("medplot2", label = strong("View Medians and Quartiles")),
              hr(),
              plotOutput("Irg_Geomeans", height="700px")),
@@ -99,7 +92,9 @@ ui <- fluidPage(
                          choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
              hr(),
              plotOutput("LDC", width="100%", height="700px")
-    ))
+    ),
+    tabPanel("User Guide",
+             includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
 )
 
 # Define server logic required to draw a histogram
@@ -110,10 +105,7 @@ server <- function(input, output) {
     checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
     
   })
-  
-  observeEvent(input$reset_input,{
-    shinyjs::reset("date")
-  })
+
   
   output$unit_type <- renderUI({
     subdat = month.dat[month.dat$ML_Name==input$site2&!is.na(month.dat$Observed_Loading),"Observed_Loading"]
@@ -144,6 +136,7 @@ server <- function(input, output) {
   
   output$Time_Series <- renderPlot({
     req(input$checkbox)
+    req(input$dateRange[1],input$dateRange[2])
     x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
     # Get number of sites
     uni.sites <- unique(x$ML_Name)
