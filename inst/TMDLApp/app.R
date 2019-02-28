@@ -327,13 +327,12 @@ server <- function(input, output) {
   })
   
   output$Rec_Geomeans <- renderPlot({
+    # Require site name input before drawing plot
     req(input$unit_type1)
+    # Legend colors - these never change
     legcols = colorspace::rainbow_hcl(2)
+    ### CONCENTRATION PLOTS ###
     if(input$unit_type1=="Concentration"){
-      # Obtain boxplot stats from loading data
-      y <- ecoli.dat[ecoli.dat$ML_Name==input$site3,c("MLID","Date","ML_Name","Rec_Season","E.coli_Geomean")]
-      y$Year = lubridate::year(y$Date)
-      y$Rec_Season[y$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
       
       # Straight bar plot - concentrations
       x <- rec.dat[rec.dat$ML_Name==input$site3,]
@@ -386,6 +385,11 @@ server <- function(input, output) {
       }
       
       if(input$medplot1){
+        # Obtain boxplot stats from loading data
+        y <- ecoli.dat[ecoli.dat$ML_Name==input$site3,c("MLID","Date","ML_Name","Rec_Season","E.coli_Geomean")]
+        y$Year = lubridate::year(y$Date)
+        y$Rec_Season[y$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
+        
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(y$E.coli_Geomean,1)
         uplim1 = max(uplim, uplim1)
@@ -403,75 +407,108 @@ server <- function(input, output) {
       }
     }
     if(input$unit_type1=="Loading"){
+      # Color scheme
       loadcol = colorspace::rainbow_hcl(3)[3]
-      par(mfrow=c(1,2))
-      # Obtain boxplot stats from loading data
-      y <- loading.dat[loading.dat$ML_Name==input$site3,c("MLID","ML_Name","Date","Rec_Season","Loading_Capacity_MOS","Observed_Loading")]
-      y <- y[!is.na(y$Observed_Loading),]
-      datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Rec_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
-      names(datstack)[names(datstack)=="value"]<-"Loading"
-      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+      colucols = colorspace::rainbow_hcl(2)
       
       # Straight bar plots
       x <- rec.dat[rec.dat$ML_Name==input$site3,]
       x = x[complete.cases(x),]
       x = x[order(x$Year),]
+      uni = unique(x$Rec_Season)
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
-      rec_load.p <- x[x$Rec_Season=="Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
-      rownames(rec_load.p)= rec_load.p$Year
-      rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
-      barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
-      box(bty="l")
-      barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Rec Season"]))
-      barperc <- barperc[barperc$V3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$V3 <- paste(barperc$V3,"%",sep="")
-        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
-      }
-      
-      nrec_load.p <- x[x$Rec_Season=="Not Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
-      rownames(nrec_load.p)= nrec_load.p$Year
-      nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]  
-      barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), main="Not Rec Season",col=c(colucols[2],loadcol))
-      legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(colucols[1],colucols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
-      box(bty="l")
-      barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Not Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Not Rec Season"]))
-      barperc <- barperc[barperc$V3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$V3 <- paste(barperc$V3,"%",sep="")
-        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
-      }
+      if(length(uni)>1){
+        par(mfrow=c(1,2))
+        rec_load.p <- x[x$Rec_Season=="Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rownames(rec_load.p)= rec_load.p$Year
+        rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
+        barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+        box(bty="l")
+        barps <- barp[1,]
+        barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Rec Season"]))
+        barperc <- barperc[barperc$V3>0,]
+        if(dim(barperc)[1]>0){
+          barperc$V3 <- paste(barperc$V3,"%",sep="")
+          text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+        }
+        
+        nrec_load.p <- x[x$Rec_Season=="Not Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rownames(nrec_load.p)= nrec_load.p$Year
+        nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]  
+        barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), main="Not Rec Season",col=c(colucols[2],loadcol))
+        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(colucols[1],colucols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+        box(bty="l")
+        barps <- barp[1,]
+        barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Not Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Not Rec Season"]))
+        barperc <- barperc[barperc$V3>0,]
+        if(dim(barperc)[1]>0){
+          barperc$V3 <- paste(barperc$V3,"%",sep="")
+          text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+        }}else{
+          par(mfrow=c(1,1))
+          colucol = ifelse(uni=="Rec Season",colucols[1],colucols[2])
+          rec_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+          rownames(rec_load.p)= rec_load.p$Year
+          rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          box(bty="l")
+          barps <- barp[1,]
+          barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
+          barperc <- barperc[barperc$V3>0,]
+          if(dim(barperc)[1]>0){
+            barperc$V3 <- paste(barperc$V3,"%",sep="")
+            text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+          }
+        }
       
       if(input$medplot1){
+        # Obtain boxplot stats from loading data
+        y <- loading.dat[loading.dat$ML_Name==input$site3,c("MLID","ML_Name","Date","Rec_Season","Loading_Capacity_MOS","Observed_Loading")]
+        y <- y[!is.na(y$Observed_Loading),]
+        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Rec_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+        names(datstack)[names(datstack)=="value"]<-"Loading"
+        datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+        
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(datstack$Loading,1)
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        par(mfrow=c(1,2))
-        barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
-        box(bty="l")
-        # x-axis arguments for boxplot based on barplot placement
-        ax <- c(barp[1,],barp[2,])
-        ax_spots = ax[order(ax)]
-        
-        boxplot(datstack$Loading[datstack$Rec_Season=="Rec Season"]~datstack$Meas_Type[datstack$Rec_Season=="Rec Season"]+lubridate::year(datstack$Date)[datstack$Rec_Season=="Rec Season"],
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[1], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-        
-        
-        barp <- barplot(t(nrec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Not Rec Season"], main="Not Rec Season",col=c(colucols[2],loadcol))
-        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
-        box(bty="l")
-        
-        # x-axis arguments for boxplot based on barplot placement
-        ax <- c(barp[1,],barp[2,])
-        ax_spots = ax[order(ax)]
-        
-        boxplot(datstack$Loading[datstack$Rec_Season=="Not Rec Season"]~datstack$Meas_Type[datstack$Rec_Season=="Not Rec Season"]+lubridate::year(datstack$Date)[datstack$Rec_Season=="Not Rec Season"],
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-        
+        if(length(uni)>1){
+          par(mfrow=c(1,2))
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+          box(bty="l")
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading[datstack$Rec_Season=="Rec Season"]~datstack$Meas_Type[datstack$Rec_Season=="Rec Season"]+lubridate::year(datstack$Date)[datstack$Rec_Season=="Rec Season"],
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[1], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+          
+          
+          barp <- barplot(t(nrec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Not Rec Season"], main="Not Rec Season",col=c(colucols[2],loadcol))
+          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
+          box(bty="l")
+          
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading[datstack$Rec_Season=="Not Rec Season"]~datstack$Meas_Type[datstack$Rec_Season=="Not Rec Season"]+lubridate::year(datstack$Date)[datstack$Rec_Season=="Not Rec Season"],
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+        }else{
+          par(mfrow=c(1,1))
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          box(bty="l")
+          
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading~datstack$Meas_Type+lubridate::year(datstack$Date),
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucol, loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+        }
+               
       }
       
     }
@@ -481,10 +518,8 @@ server <- function(input, output) {
   output$Irg_Geomeans <- renderPlot({
     req(input$unit_type2)
     legcols = colorspace::terrain_hcl(2)
+    colucols = colorspace::terrain_hcl(2)
     if(input$unit_type2=="Concentration"){
-      # Obtain boxplot stats from loading data
-      y <- ecoli.dat[ecoli.dat$ML_Name==input$site4,c("MLID","Date","ML_Name","Irg_Season","E.coli_Geomean")]
-      y$Year = lubridate::year(y$Date)
       
       # Straight bar plot - concentrations
       x <- irg.dat[irg.dat$ML_Name==input$site4,]
@@ -494,16 +529,15 @@ server <- function(input, output) {
       present = c("Irrigation Season", "Not Irrigation Season")%in%colnames(irgstack)
       if(any(present==FALSE)){
         buddies=FALSE
-        colucols = ifelse("Irrigation Season"%in%colnames(irgstack),colorspace::terrain_hcl(2)[1],colorspace::terrain_hcl(2)[1])
+        colucols = ifelse("Irrigation Season"%in%colnames(irgstack),colucols[1],colucols[2])
         irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
       }else{
         buddies=TRUE
-        colucols = colorspace::terrain_hcl(2)
         rownames(irgstack) = irgstack$Year
         irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
         irgstack1 = irgstack1[,c("Irrigation Season","Not Irrigation Season")]
       }
-      irg_conc <- barplot(t(irgstack1), beside=buddies, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      irg_conc <- barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
       legend("topright",legend=c("Irrigation Season", "Not Irrigation Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
@@ -536,12 +570,16 @@ server <- function(input, output) {
       }
       
       if(input$medplot2){
+        # Obtain boxplot stats from loading data
+        y <- ecoli.dat[ecoli.dat$ML_Name==input$site4,c("MLID","Date","ML_Name","Irg_Season","E.coli_Geomean")]
+        y$Year = lubridate::year(y$Date)
+        
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(y$E.coli_Geomean,1)
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barplot(t(irgstack1), beside=buddies, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+        barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
         abline(h=geom_crit, col="black", lty=2, lwd=2)
         legend("topright",legend=c("Irrigation Season","Not Irrigation Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
         box(bty="l")
@@ -554,74 +592,107 @@ server <- function(input, output) {
     }
     if(input$unit_type2=="Loading"){
       loadcol = colorspace::terrain_hcl(12)[8]
-      par(mfrow=c(1,2))
-      # Obtain boxplot stats from loading data
-      y <- loading.dat[loading.dat$ML_Name==input$site4,c("MLID","ML_Name","Date","Irg_Season","Loading_Capacity_MOS","Observed_Loading")]
-      y <- y[!is.na(y$Observed_Loading),]
-      datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Irg_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
-      names(datstack)[names(datstack)=="value"]<-"Loading"
-      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+      colucols = colorspace::terrain_hcl(2)
       
       # Straight bar plots
       x <- irg.dat[irg.dat$ML_Name==input$site4,]
       x = x[complete.cases(x),]
       x = x[order(x$Year),]
+      uni = unique(x$Irg_Season)
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
-      irg_load.p <- x[x$Irg_Season=="Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
-      rownames(irg_load.p)= irg_load.p$Year
-      irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
-      barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
-      box(bty="l")
-      barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Irrigation Season"]))
-      barperc <- barperc[barperc$V3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$V3 <- paste(barperc$V3,"%",sep="")
-        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
-      }
-      
-      nirg_load.p <- x[x$Irg_Season=="Not Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
-      rownames(nirg_load.p)= nirg_load.p$Year
-      nirg_load.p = nirg_load.p[,!names(nirg_load.p)%in%("Year")]  
-      barp <- barplot(t(nirg_load.p), beside=T, names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], ylim=c(0, uplim), main="Not Irrigation Season",col=c(colucols[2],loadcol))
-      legend("topright",legend=c("Observed Loading - Irg","Observed Loading - Not Irg","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(colucols[1],colucols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
-      box(bty="l")
-      barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Not Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Not Irrigation Season"]))
-      barperc <- barperc[barperc$V3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$V3 <- paste(barperc$V3,"%",sep="")
-        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+      if(length(uni)>1){
+        par(mfrow=c(1,2))
+        irg_load.p <- x[x$Irg_Season=="Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rownames(irg_load.p)= irg_load.p$Year
+        irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
+        barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+        box(bty="l")
+        barps <- barp[1,]
+        barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Irrigation Season"]))
+        barperc <- barperc[barperc$V3>0,]
+        if(dim(barperc)[1]>0){
+          barperc$V3 <- paste(barperc$V3,"%",sep="")
+          text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+        }
+        
+        nirg_load.p <- x[x$Irg_Season=="Not Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rownames(nirg_load.p)= nirg_load.p$Year
+        nirg_load.p = nirg_load.p[,!names(nirg_load.p)%in%("Year")]  
+        barp <- barplot(t(nirg_load.p), beside=T, names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], ylim=c(0, uplim), main="Not Irrigation Season",col=c(colucols[2],loadcol))
+        legend("topright",legend=c("Observed Loading - Irg","Observed Loading - Not Irg","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(colucols[1],colucols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+        box(bty="l")
+        barps <- barp[1,]
+        barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Not Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Not Irrigation Season"]))
+        barperc <- barperc[barperc$V3>0,]
+        if(dim(barperc)[1]>0){
+          barperc$V3 <- paste(barperc$V3,"%",sep="")
+          text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+        }
+        }else{
+        par(mfrow=c(1,1))
+        colucol = ifelse(uni=="Irrigation Season",legcols[1],legcols[2])
+        irg_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rownames(irg_load.p)= irg_load.p$Year
+        irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
+        barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main=uni,names.arg=x$Year, ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+        box(bty="l")
+        barps <- barp[1,]
+        barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
+        barperc <- barperc[barperc$V3>0,]
+        if(dim(barperc)[1]>0){
+          barperc$V3 <- paste(barperc$V3,"%",sep="")
+          text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
+        } 
       }
       
       if(input$medplot2){
+        # Obtain boxplot stats from loading data
+        y <- loading.dat[loading.dat$ML_Name==input$site4,c("MLID","ML_Name","Date","Irg_Season","Loading_Capacity_MOS","Observed_Loading")]
+        y <- y[!is.na(y$Observed_Loading),]
+        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Irg_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+        names(datstack)[names(datstack)=="value"]<-"Loading"
+        datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+        
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(datstack$Loading,1)
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        par(mfrow=c(1,2))
-        barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Irrigation Season"], main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
-        box(bty="l")
-        # x-axis arguments for boxplot based on barplot placement
-        ax <- c(barp[1,],barp[2,])
-        ax_spots = ax[order(ax)]
-        
-        boxplot(datstack$Loading[datstack$Irg_Season=="Irrigation Season"]~datstack$Meas_Type[datstack$Irg_Season=="Irrigation Season"]+lubridate::year(datstack$Date)[datstack$Irg_Season=="Irrigation Season"],
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[1], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-        
-        
-        barp <- barplot(t(nirg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], main="Not Irrigation Season",col=c(colucols[2],loadcol))
-        legend("topright",legend=c("Observed Loading - Irg","Observed Loading - Not Irg","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
-        box(bty="l")
-        
-        # x-axis arguments for boxplot based on barplot placement
-        ax <- c(barp[1,],barp[2,])
-        ax_spots = ax[order(ax)]
-        
-        boxplot(datstack$Loading[datstack$Irg_Season=="Not Irrigation Season"]~datstack$Meas_Type[datstack$Irg_Season=="Not Irrigation Season"]+lubridate::year(datstack$Date)[datstack$Irg_Season=="Not Irrigation Season"],
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-        
+        if(length(uni)>1){
+          par(mfrow=c(1,2))
+          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Irrigation Season"], main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+          box(bty="l")
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading[datstack$Irg_Season=="Irrigation Season"]~datstack$Meas_Type[datstack$Irg_Season=="Irrigation Season"]+lubridate::year(datstack$Date)[datstack$Irg_Season=="Irrigation Season"],
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[1], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+          
+          
+          barp <- barplot(t(nirg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], main="Not Irrigation Season",col=c(colucols[2],loadcol))
+          legend("topright",legend=c("Observed Loading - Irg","Observed Loading - Not Irg","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
+          box(bty="l")
+          
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading[datstack$Irg_Season=="Not Irrigation Season"]~datstack$Meas_Type[datstack$Irg_Season=="Not Irrigation Season"]+lubridate::year(datstack$Date)[datstack$Irg_Season=="Not Irrigation Season"],
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+        }else{
+          par(mfrow=c(1,1))
+          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          box(bty="l")
+          
+          # x-axis arguments for boxplot based on barplot placement
+          ax <- c(barp[1,],barp[2,])
+          ax_spots = ax[order(ax)]
+          
+          boxplot(datstack$Loading~datstack$Meas_Type+lubridate::year(datstack$Date),
+                  lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucol, loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+          
+        }
       }
     }
   })
