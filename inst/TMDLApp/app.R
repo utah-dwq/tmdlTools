@@ -22,6 +22,7 @@ geom_crit = specs$Value[specs$Parameter=="Geometric Mean Criterion"]
 cf = specs$Value[specs$Parameter=="Correction Factor"]
 mos = specs$Value[specs$Parameter=="Margin of Safety"]
 
+perc.red <- function(x,y){100-x/y*100}
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(title="E.coli Data Explorer",
@@ -60,6 +61,10 @@ ui <- fluidPage(title="E.coli Data Explorer",
              selectInput("site2",
                          label = "Site Name",
                          choices=c(unique(month.dat$ML_Name))),
+             div(id="date1",uiOutput("dateRange1")),
+             actionButton("reset_input1","Reset Date Range"),
+             br(),
+             br(),
              uiOutput("unit_type"),
              checkboxInput("medplot", label = strong("View Medians and Quartiles")),
              hr(),
@@ -104,18 +109,18 @@ server <- function(input, output) {
                plotOutput("LDC", width="100%", height="700px")
       ), target="User Guide")
     }
-    
   })
   
   observeEvent(input$reset_input,{
     reset("date")})
+  observeEvent(input$reset_input1,{
+    reset("date1")})
   
   output$checkbox <- renderUI({
     choice <-  unique(ecoli.dat$ML_Name)
     checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
     
   })
-
   
   output$unit_type <- renderUI({
     subdat = month.dat[month.dat$ML_Name==input$site2&!is.na(month.dat$Observed_Loading),"Observed_Loading"]
@@ -123,7 +128,6 @@ server <- function(input, output) {
       subd=c("Concentration","Loading")
     }else{subd=c("Concentration")}
     selectInput("unit_type","Select Measurement Type", choices = subd, selected = subd[1])
-    
   })
   
   output$unit_type1 <- renderUI({
@@ -132,7 +136,6 @@ server <- function(input, output) {
       subd=c("Concentration","Loading")
     }else{subd=c("Concentration")}
     selectInput("unit_type1","Select Measurement Type", choices = subd, selected = subd[1])
-    
   })
   
   output$unit_type2 <- renderUI({
@@ -141,7 +144,6 @@ server <- function(input, output) {
       subd=c("Concentration","Loading")
     }else{subd=c("Concentration")}
     selectInput("unit_type2","Select Measurement Type", choices = subd, selected = subd[1])
-    
   })
   
   output$Time_Series <- renderPlot({
@@ -238,30 +240,43 @@ server <- function(input, output) {
     }
   })
   
+  output$dateRange1 <- renderUI({
+    mondat = ecoli.dat[ecoli.dat$ML_Name==input$site2,]
+    maxd = max(mondat$Date)
+    mind = min(mondat$Date)
+    dateRangeInput("dateRange1",
+                   label="Year Range",
+                   start=mind,
+                   end=maxd,
+                   min=mind,
+                   max=maxd)
+  })
+  
   output$Monthly_Geomeans <- renderPlot({
     req(input$unit_type)
     barcolors = piratepal(palette="up")
     if(input$unit_type=="Concentration"){
-      # Obtain boxplot stats from loading data
-      y <- ecoli.dat[ecoli.dat$ML_Name==input$site2,c("MLID","ML_Name","Date","E.coli_Geomean")]
-      y$Month = lubridate::month(y$Date, label=TRUE, abbr=TRUE)
-      y = droplevels(y[order(y$Month),])
-      
       # Straight bar plot - concentrations
-      x <- month.dat[month.dat$ML_Name==input$site2,]
+      datrange <- ecoli.dat[ecoli.dat$ML_Name==input$site2&ecoli.dat$Date>input$dateRange1[1]&ecoli.dat$Date<input$dateRange1[2],]
+      datrange$month = lubridate::month(datrange$Date, label=TRUE)
+      x <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=datrange, FUN=function(x){exp(mean(log(x)))})
+      x$Percent_Reduction <- ifelse(x$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,x$E.coli_Geomean), digits=0),0)
       uplim = max(x$E.coli_Geomean)*1.2
       mo_conc.p <- x$E.coli_Geomean
       barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
       legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
-      barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction_C))
+      barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
       barperc <- barperc[barperc$X3>0,]
       if(dim(barperc)[1]>0){
         barperc$X4 <- paste(barperc$X3,"%",sep="")
         text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1) 
       }
       if(input$medplot){
+        # Obtain boxplot stats from loading data
+        y = droplevels(datrange[order(datrange$month),])
+        
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(y$E.coli_Geomean,1)
         uplim1 = max(uplim, uplim1)
@@ -274,32 +289,32 @@ server <- function(input, output) {
         
         # x-axis arguments for boxplot based on barplot placement
         
-        boxplot(y$E.coli_Geomean~y$Month,
+        boxplot(y$E.coli_Geomean~y$month,
                 lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
       }
     }
     if(input$unit_type=="Loading"){
-      # Obtain boxplot stats from loading data
-      y <- loading.dat[loading.dat$ML_Name==input$site2,c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
-      y <- y[!is.na(y$Observed_Loading),]
-      datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
-      names(datstack)[names(datstack)=="value"]<-"Loading"
-      datstack$Month = lubridate::month(datstack$Date, label=TRUE, abbr=TRUE)
-      datstack = datstack[order(datstack$Month),]
-      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
-      
-      # Straight bar plots
       cols = piratepal(palette="up")
-      x <- month.dat[month.dat$ML_Name==input$site2,]
-      x = x[complete.cases(x),]
-      rownames(x) <- x$month
+      # Narrow dataset
+      datrange <- loading.dat[loading.dat$ML_Name==input$site2&loading.dat$Date>input$dateRange1[1]&loading.dat$Date<input$dateRange1[2],c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
+      datrange <- datrange[!is.na(datrange$Observed_Loading),]
+      datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+      datstack$month = lubridate::month(datstack$Date, label=TRUE)
+      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+      names(datstack)[names(datstack)=="value"]<-"Loading"
+      x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
+      x = dcast(data=x, month~Meas_Type, value.var="Loading")
+      x = x[order(x$month),]
+      x$Percent_Reduction = ifelse(x$Observed_Loading>x$Loading_Capacity_MOS,round(perc.red(x$Loading_Capacity_MOS,x$Observed_Loading), digits=0),0)
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
       mo_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
-      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans", ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+      
+      # Straight bar plots
+      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
       legend("topright",legend=c("Observed Loading","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
       box(bty="l")
       barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
+      barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
       barperc <- barperc[barperc$V3>0,]
       if(dim(barperc)[1]>0){
         barperc$V3 <- paste(barperc$V3,"%",sep="")
@@ -312,7 +327,7 @@ server <- function(input, output) {
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+        barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
         legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
         box(bty="l")
         
