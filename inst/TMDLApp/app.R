@@ -329,30 +329,30 @@ server <- function(input, output) {
   output$Rec_Geomeans <- renderPlot({
     # Require site name input before drawing plot
     req(input$unit_type1)
-    # Legend colors - these never change
-    legcols = colorspace::rainbow_hcl(2)
+    # Color schemes (unless otherwise defined)
+    legcols = colorspace::rainbow_hcl(2) # legend colors--never redefined.
+    colucols = colorspace::rainbow_hcl(2) # bars--redefined if only one category exists
     ### CONCENTRATION PLOTS ###
     if(input$unit_type1=="Concentration"){
-      
-      # Straight bar plot - concentrations
+      # Obtain data from rec.dat
       x <- rec.dat[rec.dat$ML_Name==input$site3,]
-      x$Rec_Season[x$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
+      x$Rec_Season[x$Rec_Season=="Not Rec Season"] = paste0("z","NotRec") # ensures barplots are ordered rec season-->not rec season (alphabetical issue)
       x = x[order(x$Year),]
+      # Set upper y limit for plot based on max geomean
       uplim = max(x$E.coli_Geomean)*1.2
+      # Create columns for "Rec Season" and "Not Rec Season" to separate into different bar plots.
       recstack <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "E.coli_Geomean")
+      recstack1 = recstack[,!names(recstack)%in%"Year"]
+      # Check to see if both rec and non rec seasons represented
       present = c("Rec Season", "zNotRec")%in%colnames(recstack)
-      if(any(present==FALSE)){
-        buddies=FALSE
-        colucols = ifelse("Rec Season"%in%colnames(recstack),colorspace::rainbow_hcl(2)[1],colorspace::rainbow_hcl(2)[1])
-        recstack1 = recstack[,!names(recstack)%in%"Year"]
+      if(any(present==FALSE)){ # if rec or non rec are missing...
+        buddies=FALSE # beside becomes false
+        colucols = ifelse("Rec Season"%in%colnames(recstack),colucols[1],colucols[2]) # restrict colors to the one corresponding to the present category
       }else{
-        buddies=TRUE
-        colucols = colorspace::rainbow_hcl(2)
-        rownames(recstack) = recstack$Year
-        recstack1 = recstack[,!names(recstack)%in%"Year"]
-        recstack1 = recstack1[,c("Rec Season","zNotRec")]
+        buddies=TRUE # beside becomes true
       }
-      rec_conc <- barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      # The actual plot...
+      rec_conc <- barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
       legend("topright",legend=c("Rec Season", "Not Rec Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
@@ -367,34 +367,37 @@ server <- function(input, output) {
       perc_y = melt(recstack, id.vars = c("Year"), value.vars = c("zNotRec", "Rec Season"), value.name = "value1")
       perc_y = perc_y[order(perc_y$Year),]
       
+      # Merge percent reductions and height at which they should be reported.
       percs <- merge(perc_labs,perc_y, all=TRUE) 
       percs = percs[order(percs$Year),]
       
       # Get x pos of bars
-      if(any(present==FALSE)){
+      if(any(present==FALSE)){ # if rec or non rec are missing, that means that rec_conc only has one set of axis positions
         perc_at = rec_conc
       }else{
-        perc_at = c(rec_conc[1,],rec_conc[2,])
+        perc_at = c(rec_conc[1,],rec_conc[2,]) # if both present, there are two rows of numbers
         perc_at = perc_at[order(perc_at)]
       }
-      recperc <- data.frame(perc_at,percs)
+      recperc <- data.frame(perc_at,percs) # meld data with x axis position
       recperc1 <- recperc[recperc$value>0&!is.na(recperc$value),]
+      
+      # Plot text of percent reduction onto plot
       if(dim(recperc1)[1]>0){
         recperc1$percn <- paste(recperc1$value,"%",sep="")
         text(recperc1$perc_at,recperc1$value1+0.1*mean(recperc1$value1),labels=recperc1$percn,cex=1) 
       }
-      
+      ## CONC BOXPLOTS ##
       if(input$medplot1){
-        # Obtain boxplot stats from loading data
+        # Obtain boxplot stats from geomean data
         y <- ecoli.dat[ecoli.dat$ML_Name==input$site3,c("MLID","Date","ML_Name","Rec_Season","E.coli_Geomean")]
         y$Year = lubridate::year(y$Date)
         y$Rec_Season[y$Rec_Season=="Not Rec Season"] = paste0("z","NotRec")
         
-        # Get axes right to accommodate boxplot overlay (if checkbox checked)
+        # Update upper y axis limit if outliers are beyond max barplot height (usually are)
         uplim1 = quantile(y$E.coli_Geomean,1)
         uplim1 = max(uplim, uplim1)
         
-        # Bar plot
+        # Create original bar plot with different legend
         barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
         abline(h=geom_crit, col="black", lty=2, lwd=2)
         legend("topright",legend=c("Rec Season","Not Rec Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
@@ -406,37 +409,42 @@ server <- function(input, output) {
                 lty=1, xaxt="n",yaxt="n", frame=FALSE, col=ggplot2::alpha(colucols,0.1), boxwex = 0.7, at=boxat, add=TRUE)
       }
     }
+    ### LOADING PLOTS ###
     if(input$unit_type1=="Loading"){
-      # Color scheme
+      # Define loading capacity color
       loadcol = colorspace::rainbow_hcl(3)[3]
-      colucols = colorspace::rainbow_hcl(2)
-      
-      # Straight bar plots
+      # Filter to data needed to produce plots
       x <- rec.dat[rec.dat$ML_Name==input$site3,]
       x = x[complete.cases(x),]
       x = x[order(x$Year),]
+      # Determine if rec/non rec represented
       uni = unique(x$Rec_Season)
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
-      if(length(uni)>1){
-        par(mfrow=c(1,2))
+      if(length(uni)>1){ # if both represented...
+        par(mfrow=c(1,2)) # create two plot panes...
+        # Separate into rec and non rec
+        # Rec data
         rec_load.p <- x[x$Rec_Season=="Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
         rownames(rec_load.p)= rec_load.p$Year
         rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
+        # Rec barplot
         barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Rec Season"]))
         barperc <- barperc[barperc$V3>0,]
+        # Plot percent reduction needed text, if applicable.
         if(dim(barperc)[1]>0){
           barperc$V3 <- paste(barperc$V3,"%",sep="")
           text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
         }
         
+        # Non-Rec data, same process
         nrec_load.p <- x[x$Rec_Season=="Not Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
         rownames(nrec_load.p)= nrec_load.p$Year
         nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]  
         barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), main="Not Rec Season",col=c(colucols[2],loadcol))
-        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(colucols[1],colucols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Not Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Not Rec Season"]))
@@ -444,13 +452,15 @@ server <- function(input, output) {
         if(dim(barperc)[1]>0){
           barperc$V3 <- paste(barperc$V3,"%",sep="")
           text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
-        }}else{
-          par(mfrow=c(1,1))
-          colucol = ifelse(uni=="Rec Season",colucols[1],colucols[2])
+        }}else{ # If only one category represented...
+          par(mfrow=c(1,1)) # only make one plot
+          colucol = ifelse(uni=="Rec Season",colucols[1],colucols[2]) # redefine bar color
           rec_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
           rownames(rec_load.p)= rec_load.p$Year
           rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
+          # Bar plot singular - same as rec 
           barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
           box(bty="l")
           barps <- barp[1,]
           barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
@@ -460,7 +470,7 @@ server <- function(input, output) {
             text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
           }
         }
-      
+      ## LOADING BOXPLOTS ##
       if(input$medplot1){
         # Obtain boxplot stats from loading data
         y <- loading.dat[loading.dat$ML_Name==input$site3,c("MLID","ML_Name","Date","Rec_Season","Loading_Capacity_MOS","Observed_Loading")]
@@ -469,12 +479,12 @@ server <- function(input, output) {
         names(datstack)[names(datstack)=="value"]<-"Loading"
         datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
         
-        # Get axes right to accommodate boxplot overlay (if checkbox checked)
+        # Update upper y axis limit of outliers are beyond max barplot height
         uplim1 = quantile(datstack$Loading,1)
         uplim1 = max(uplim, uplim1)
         
-        # Bar plot
-        if(length(uni)>1){
+        # Create OG barplot with new legend.
+        if(length(uni)>1){# determine whether one or two plot panels needed...
           par(mfrow=c(1,2))
           barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
           box(bty="l")
@@ -517,27 +527,31 @@ server <- function(input, output) {
   
   output$Irg_Geomeans <- renderPlot({
     req(input$unit_type2)
+    
+    # Color schemes (unless otherwise defined)
     legcols = colorspace::terrain_hcl(2)
     colucols = colorspace::terrain_hcl(2)
+    
+    ### CONCENTRATION PLOTS ###
     if(input$unit_type2=="Concentration"){
-      
-      # Straight bar plot - concentrations
+      # Obtain data from irg.dat
       x <- irg.dat[irg.dat$ML_Name==input$site4,]
       x = x[order(x$Year),]
+      # Define upper limit of the y-axis based on maximum ecoli geomean
       uplim = max(x$E.coli_Geomean)*1.2
+      # Create columns for "Irrigation Season" and "Not Irrigation Season"
       irgstack <- reshape2::dcast(data = x, Year~Irg_Season,value.var = "E.coli_Geomean")
+      irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
+      # Check to see if both irg and not irg represented
       present = c("Irrigation Season", "Not Irrigation Season")%in%colnames(irgstack)
-      if(any(present==FALSE)){
-        buddies=FALSE
-        colucols = ifelse("Irrigation Season"%in%colnames(irgstack),colucols[1],colucols[2])
-        irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
+      if(any(present==FALSE)){ # if rec or non rec are missing...
+        buddies=FALSE # beside becomes false
+        colucols = ifelse("Irrigation Season"%in%colnames(irgstack),colucols[1],colucols[2]) # restrict colors to the one corresponding to the present category
       }else{
-        buddies=TRUE
-        rownames(irgstack) = irgstack$Year
-        irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
-        irgstack1 = irgstack1[,c("Irrigation Season","Not Irrigation Season")]
+        buddies=TRUE # beside becomes true
       }
-      irg_conc <- barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      # The actual plot...
+      irg_conc <- barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
       legend("topright",legend=c("Irrigation Season", "Not Irrigation Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
@@ -552,33 +566,36 @@ server <- function(input, output) {
       perc_y = melt(irgstack, id.vars = c("Year"), value.vars = c("Not Irrigation Season", "Irrigation Season"), value.name = "value1")
       perc_y = perc_y[order(perc_y$Year),]
       
+      # Merge percent reductions and height at which they should be reported
       percs <- merge(perc_labs,perc_y, all=TRUE) 
       percs = percs[order(percs$Year),]
       
       # Get x pos of bars
       if(any(present==FALSE)){
-        perc_at = irg_conc
+        perc_at = irg_conc # if irg or not irg are missing, that means that irg_conc only has one set of axis positions
       }else{
-        perc_at = c(irg_conc[1,],irg_conc[2,])
+        perc_at = c(irg_conc[1,],irg_conc[2,]) # if both present, there are two rows of numbers
         perc_at = perc_at[order(perc_at)]
       }
-      irgperc <- data.frame(perc_at,percs)
+      irgperc <- data.frame(perc_at,percs) # meld data with x axis position
       irgperc1 <- irgperc[irgperc$value>0&!is.na(irgperc$value),]
+      
+      # Plot text of percent reduction on plot
       if(dim(irgperc1)[1]>0){
         irgperc1$percn <- paste(irgperc1$value,"%",sep="")
         text(irgperc1$perc_at,irgperc1$value1+0.1*mean(irgperc1$value1),labels=irgperc1$percn,cex=1) 
       }
-      
+      ## CONC BOXPLOTS ##
       if(input$medplot2){
-        # Obtain boxplot stats from loading data
+        # Obtain boxplot stats from geomean data
         y <- ecoli.dat[ecoli.dat$ML_Name==input$site4,c("MLID","Date","ML_Name","Irg_Season","E.coli_Geomean")]
         y$Year = lubridate::year(y$Date)
         
-        # Get axes right to accommodate boxplot overlay (if checkbox checked)
+        # Update upper y axis limit if outliers are beyond max barplot height
         uplim1 = quantile(y$E.coli_Geomean,1)
         uplim1 = max(uplim, uplim1)
         
-        # Bar plot
+        # Create original barplot with different legend
         barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
         abline(h=geom_crit, col="black", lty=2, lwd=2)
         legend("topright",legend=c("Irrigation Season","Not Irrigation Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
@@ -590,14 +607,16 @@ server <- function(input, output) {
                 lty=1, xaxt="n",yaxt="n", frame=FALSE, col=ggplot2::alpha(colucols,0.1), boxwex = 0.7, at=boxat, add=TRUE)
       }
     }
+    ### LOADING PLOTS ###
     if(input$unit_type2=="Loading"){
+      # Define loading capacity color
       loadcol = colorspace::terrain_hcl(12)[8]
-      colucols = colorspace::terrain_hcl(2)
       
-      # Straight bar plots
+      # Filter to data needed to produce plots
       x <- irg.dat[irg.dat$ML_Name==input$site4,]
       x = x[complete.cases(x),]
       x = x[order(x$Year),]
+      # Determine if rec/non rec represented
       uni = unique(x$Irg_Season)
       uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
       if(length(uni)>1){
@@ -635,6 +654,7 @@ server <- function(input, output) {
         rownames(irg_load.p)= irg_load.p$Year
         irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
         barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main=uni,names.arg=x$Year, ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+        legend("topright",legend=c("Observed Loading - Irg","Observed Loading - Not Irg","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
