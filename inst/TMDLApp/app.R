@@ -245,7 +245,7 @@ server <- function(input, output) {
     maxd = max(mondat$Date)
     mind = min(mondat$Date)
     dateRangeInput("dateRange1",
-                   label="Year Range",
+                   label="Date Range",
                    start=mind,
                    end=maxd,
                    min=mind,

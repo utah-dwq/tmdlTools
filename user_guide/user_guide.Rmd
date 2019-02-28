@@ -34,7 +34,7 @@ Note that the colors are not specific to each site, but rather reflect the order
 
 ### Monthly
 
-Monthly barplots display the geometric mean *E.coli* concentrations/loadings calculated using all available data across all years. The colors of the bars are a gradient added for contrast and are not specific to each month. Note that the horizontal line plotted in all graphs is the geometric mean standard, and the percentage reported above certain bars represents the percent reduction needed to meet the geometric mean standard. Also be aware that quartiles may reveal points that fall above the geomean standard but are not consistent enough to push the geometric mean of the data above the standard. 
+Monthly barplots display the geometric mean *E.coli* concentrations/loadings calculated using the date range specified (defaults to all available data). The colors of the bars are a gradient added for contrast and are not specific to each month. Note that the horizontal line plotted in all graphs is the geometric mean standard, and the percentage reported above certain bars represents the percent reduction needed to meet the geometric mean standard. Also be aware that quartiles may reveal points that fall above the geomean standard but are not consistent enough to push the geometric mean of the data above the standard. Selecting date ranges containing no measurements will trigger an error message.
 
 ### Rec/Non-Rec Season
 
