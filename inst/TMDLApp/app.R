@@ -480,7 +480,7 @@ server <- function(input, output) {
   
   output$Irg_Geomeans <- renderPlot({
     req(input$unit_type2)
-    colucols = colorspace::terrain_hcl(2)
+    legcols = colorspace::terrain_hcl(2)
     if(input$unit_type2=="Concentration"){
       # Obtain boxplot stats from loading data
       y <- ecoli.dat[ecoli.dat$ML_Name==input$site4,c("MLID","Date","ML_Name","Irg_Season","E.coli_Geomean")]
@@ -491,11 +491,20 @@ server <- function(input, output) {
       x = x[order(x$Year),]
       uplim = max(x$E.coli_Geomean)*1.2
       irgstack <- reshape2::dcast(data = x, Year~Irg_Season,value.var = "E.coli_Geomean")
-      rownames(irgstack) = irgstack$Year
-      irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
-      irgstack1 = irgstack1[,c("Irrigation Season","Not Irrigation Season")]
-      irg_conc <- barplot(t(irgstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
-      legend("topright",legend=c("Irrigation Season", "Not Irrigation Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(colucols, NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
+      present = c("Irrigation Season", "Not Irrigation Season")%in%colnames(irgstack)
+      if(any(present==FALSE)){
+        buddies=FALSE
+        colucols = ifelse("Irrigation Season"%in%colnames(irgstack),colorspace::terrain_hcl(2)[1],colorspace::terrain_hcl(2)[1])
+        irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
+      }else{
+        buddies=TRUE
+        colucols = colorspace::terrain_hcl(2)
+        rownames(irgstack) = irgstack$Year
+        irgstack1 = irgstack[,!names(irgstack)%in%"Year"]
+        irgstack1 = irgstack1[,c("Irrigation Season","Not Irrigation Season")]
+      }
+      irg_conc <- barplot(t(irgstack1), beside=buddies, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      legend("topright",legend=c("Irrigation Season", "Not Irrigation Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
       box(bty="l")
       abline(h=geom_crit, col="black", lwd=2)
       
@@ -513,8 +522,12 @@ server <- function(input, output) {
       percs = percs[order(percs$Year),]
       
       # Get x pos of bars
-      perc_at = c(irg_conc[1,],irg_conc[2,])
-      perc_at = perc_at[order(perc_at)]
+      if(any(present==FALSE)){
+        perc_at = irg_conc
+      }else{
+        perc_at = c(irg_conc[1,],irg_conc[2,])
+        perc_at = perc_at[order(perc_at)]
+      }
       irgperc <- data.frame(perc_at,percs)
       irgperc1 <- irgperc[irgperc$value>0&!is.na(irgperc$value),]
       if(dim(irgperc1)[1]>0){
@@ -528,9 +541,9 @@ server <- function(input, output) {
         uplim1 = max(uplim, uplim1)
         
         # Bar plot
-        barplot(t(irgstack1), beside=TRUE, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+        barplot(t(irgstack1), beside=buddies, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
         abline(h=geom_crit, col="black", lty=2, lwd=2)
-        legend("topright",legend=c("Irrigation Season","Not Irrigation Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
+        legend("topright",legend=c("Irrigation Season","Not Irrigation Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
         box(bty="l")
         
         # x-axis arguments for boxplot based on barplot placement
