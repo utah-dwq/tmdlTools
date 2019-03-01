@@ -26,88 +26,85 @@ perc.red <- function(x,y){100-x/y*100}
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(title="E.coli Data Explorer",
-  titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
-  tabsetPanel(id="all_the_things",
-    tabPanel("Time Series",
-             shinyjs::useShinyjs(),
-             h3("Bacterial Concentrations Over Time by Site"),
-             plotOutput("Time_Series"),
-             hr(),
-             h5(strong("Use the site check boxes to select multiple sites to view and edit the date range menu to change the time axis in the plot above. Changing the criteria alters the percent exceedance reported at the top of the plot.")),
-             br(),
-             fluidRow(
-               column(4,
-                      selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
-                      uiOutput("checkbox")),
-               column(4,
-                      div(
-                        id = "date",
-                        dateRangeInput("dateRange",
-                                       label="Date Range",
-                                       start=min(ecoli.dat$Date),
-                                       end=max(ecoli.dat$Date),
-                                       min=min(ecoli.dat$Date),
-                                       max=max(ecoli.dat$Date)
-                        )),
-                      actionButton("reset_input","Reset Date Range"),
-                      br(),
-                      br(),
-                      textInput("crit1",label = "Max Criterion",value=max_crit),
-                      textInput("crit2",label = "Geomean Criterion",value=geom_crit)
-               ))
-    ), 
-    tabPanel("Monthly",
-             h3("Bacterial Concentrations/Loadings by Month"),
-             selectInput("site2",
-                         label = "Site Name",
-                         choices=c(unique(month.dat$ML_Name))),
-             div(id="date1",uiOutput("dateRange1")),
-             actionButton("reset_input1","Reset Date Range"),
-             br(),
-             br(),
-             uiOutput("unit_type"),
-             checkboxInput("medplot", label = strong("View Medians and Quartiles")),
-             hr(),
-             plotOutput("Monthly_Geomeans", height="700px")),
-    tabPanel("Rec/Non-Rec Season",
-             h3("Bacterial Concentrations/Loadings in Recreation/Non-Recreation Seasons"),
-             selectInput("site3",
-                         label = "Site Name",
-                         choices=c(unique(rec.dat$ML_Name))),
-             uiOutput("unit_type1"),
-             checkboxInput("medplot1", label = strong("View Medians and Quartiles")),
-             hr(),
-             plotOutput("Rec_Geomeans", height="700px")),
-    tabPanel("Irrigation/Non-Irrigation Season",
-             h3("Bacterial Concentrations/Loadings in Irrigation/Non-Irrigation Seasons"),
-             selectInput("site4",
-                         label = "Site Name",
-                         choices=c(unique(irg.dat$ML_Name))),
-             uiOutput("unit_type2"),
-             checkboxInput("medplot2", label = strong("View Medians and Quartiles")),
-             hr(),
-             plotOutput("Irg_Geomeans", height="700px")),
-    tabPanel("User Guide",
-             includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
+                titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
+                tabsetPanel(id="all_the_things",
+                            tabPanel("Time Series",
+                                     shinyjs::useShinyjs(),
+                                     h3("Bacterial Concentrations Over Time by Site"),
+                                     sidebarPanel(selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
+                                                  div(id = "date",
+                                                      dateRangeInput("dateRange",
+                                                                     label="Date Range",
+                                                                     start=min(ecoli.dat$Date),
+                                                                     end=max(ecoli.dat$Date),
+                                                                     min=min(ecoli.dat$Date),
+                                                                     max=max(ecoli.dat$Date)
+                                                      )),
+                                                  actionButton("reset_input","Reset Date Range"),
+                                                  br(),
+                                                  br(),
+                                                  uiOutput("checkbox"),
+                                                  textInput("crit1",label = "Max Criterion",value=max_crit),
+                                                  textInput("crit2",label = "Geomean Criterion",value=geom_crit), width=3),
+                                     mainPanel(tabsetPanel(id="timeseries",
+                                                           tabPanel("Plot",
+                                                                    plotOutput("Time_Series")),
+                                                           tabPanel("Data",
+                                                                    DT::dataTableOutput("Time_Data"))))),
+                            
+                            tabPanel("Monthly",
+                                     h3("Bacterial Concentrations/Loadings by Month"),
+                                     selectInput("site2",
+                                                 label = "Site Name",
+                                                 choices=c(unique(month.dat$ML_Name))),
+                                     div(id="date1",uiOutput("dateRange1")),
+                                     actionButton("reset_input1","Reset Date Range"),
+                                     br(),
+                                     br(),
+                                     uiOutput("unit_type"),
+                                     checkboxInput("medplot", label = strong("View Medians and Quartiles")),
+                                     hr(),
+                                     plotOutput("Monthly_Geomeans", height="700px")),
+                            tabPanel("Rec/Non-Rec Season",
+                                     h3("Bacterial Concentrations/Loadings in Recreation/Non-Recreation Seasons"),
+                                     selectInput("site3",
+                                                 label = "Site Name",
+                                                 choices=c(unique(rec.dat$ML_Name))),
+                                     uiOutput("unit_type1"),
+                                     checkboxInput("medplot1", label = strong("View Medians and Quartiles")),
+                                     hr(),
+                                     plotOutput("Rec_Geomeans", height="700px")),
+                            tabPanel("Irrigation/Non-Irrigation Season",
+                                     h3("Bacterial Concentrations/Loadings in Irrigation/Non-Irrigation Seasons"),
+                                     selectInput("site4",
+                                                 label = "Site Name",
+                                                 choices=c(unique(irg.dat$ML_Name))),
+                                     uiOutput("unit_type2"),
+                                     checkboxInput("medplot2", label = strong("View Medians and Quartiles")),
+                                     hr(),
+                                     plotOutput("Irg_Geomeans", height="700px")),
+                            tabPanel("User Guide",
+                                     includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  ############## UI RELATED ####################
   observe({
     if(!is.null(loading.dat)){
       insertTab(inputId="all_the_things",
                 tabPanel("Load Duration Curves",
-               h3("Bacterial Loadings Across Flow Regimes"),
-               selectInput("site1",
-                           label = "Site Name",
-                           choices=c(unique(loading.dat$ML_Name))),
-               selectInput("pt_type",
-                           label = "Data Category",
-                           choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
-               hr(),
-               plotOutput("LDC", width="100%", height="700px")
-      ), target="User Guide")
+                         h3("Bacterial Loadings Across Flow Regimes"),
+                         selectInput("site1",
+                                     label = "Site Name",
+                                     choices=c(unique(loading.dat$ML_Name))),
+                         selectInput("pt_type",
+                                     label = "Data Category",
+                                     choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
+                         hr(),
+                         plotOutput("LDC", width="100%", height="700px")
+                ), target="User Guide")
     }
   })
   
@@ -145,25 +142,36 @@ server <- function(input, output) {
     }else{subd=c("Concentration")}
     selectInput("unit_type2","Select Measurement Type", choices = subd, selected = subd[1])
   })
+  #
+  ######################## OUTPUT RELATED ############################
+  
+  ################ TIME SERIES #####################  
+  timeseriesdat <- reactiveValues()
+  
+  observe({
+    x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
+    timeseriesdat$min = input$dateRange[1]
+    timeseriesdat$max = input$dateRange[2]
+    timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
+  })
   
   output$Time_Series <- renderPlot({
     req(input$checkbox)
     req(input$dateRange[1],input$dateRange[2])
-    x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
+    x = timeseriesdat$x
+    min = timeseriesdat$min
+    max = timeseriesdat$max
     # Get number of sites
     uni.sites <- unique(x$ML_Name)
     colrs <- yarrr::piratepal("basel")
-    # Get dates for axis
-    min = input$dateRange[1]
-    max = input$dateRange[2]
-    x <- x[x$Date>min&x$Date<max,]
+    
     # Create an empty plot
     plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
     axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
     abline(h=input$crit2,col="orange", lwd=2)
     abline(h=input$crit1, col="red", lwd=2)
-    text(min+10,as.numeric(input$crit1)-100, "Max Crit")
-    text(min+150,as.numeric(input$crit2)-100, "Geometric Mean Crit")
+    text(min+150,as.numeric(input$crit1)-100, "Max Crit")
+    text(min+400,as.numeric(input$crit2)-100, "Geometric Mean Crit")
     site = vector()
     colr = vector()
     # Start plotting
@@ -179,6 +187,13 @@ server <- function(input, output) {
     }
     l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1) 
   })
+  
+  
+  
+  output$Time_Data <- renderDT(timeseriesdat$x,
+                               rownames = FALSE,
+                               options = list(pageLength = 100))
+  ################ LDC #####################
   
   output$LDC <- renderPlot({
     req(input$pt_type)
@@ -251,6 +266,8 @@ server <- function(input, output) {
                    min=mind,
                    max=maxd)
   })
+  
+  ################ MONTHLY #####################   
   
   output$Monthly_Geomeans <- renderPlot({
     req(input$unit_type)
@@ -340,6 +357,8 @@ server <- function(input, output) {
       }}
     
   })
+  
+  ################ REC SEASON #####################   
   
   output$Rec_Geomeans <- renderPlot({
     # Require site name input before drawing plot
@@ -533,12 +552,14 @@ server <- function(input, output) {
           boxplot(datstack$Loading~datstack$Meas_Type+lubridate::year(datstack$Date),
                   lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucol, loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
         }
-               
+        
       }
       
     }
     
   })
+  
+  ################ IRG SEASON #####################
   
   output$Irg_Geomeans <- renderPlot({
     req(input$unit_type2)
@@ -662,7 +683,7 @@ server <- function(input, output) {
           barperc$V3 <- paste(barperc$V3,"%",sep="")
           text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1) 
         }
-        }else{
+      }else{
         par(mfrow=c(1,1))
         colucol = ifelse(uni=="Irrigation Season",legcols[1],legcols[2])
         irg_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
