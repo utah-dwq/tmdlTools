@@ -1,5 +1,12 @@
 ################## SHINY APP ##########################################
-
+require(openxlsx)
+require(lubridate)
+require(DT)
+require(shinyjs)
+require(yarrr)
+require(colorspace)
+require(reshape2)
+require(markdown)
 wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
@@ -50,7 +57,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                            tabPanel("Plot",
                                                                     plotOutput("Time_Series")),
                                                            tabPanel("Data",
-                                                                    DT::dataTableOutput("Time_Data"))))),
+                                                                    DT::dataTableOutput("Time_Data", height = 500))))),
                             
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
@@ -192,7 +199,7 @@ server <- function(input, output) {
   
   output$Time_Data <- renderDT(timeseriesdat$x,
                                rownames = FALSE,
-                               options = list(pageLength = 100))
+                               options = list(dom="ft", pageLength = 1000, lengthChange = FALSE, scrollY = "800px"))
   ################ LDC #####################
   
   output$LDC <- renderPlot({
