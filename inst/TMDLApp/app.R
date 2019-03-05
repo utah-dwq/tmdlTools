@@ -7,7 +7,7 @@ require(yarrr)
 require(colorspace)
 require(reshape2)
 require(markdown)
-wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
+wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -52,13 +52,11 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   br(),
                                                   uiOutput("checkbox"),
                                                   textInput("crit1",label = "Max Criterion",value=max_crit),
-                                                  textInput("crit2",label = "Geomean Criterion",value=geom_crit), width=3),
-                                     mainPanel(tabsetPanel(id="timeseries",
-                                                           tabPanel("Plot",
-                                                                    plotOutput("Time_Series")),
-                                                           tabPanel("Data",
-                                                                    DT::dataTableOutput("Time_Data", height = 500))))),
-                            
+                                                  textInput("crit2",label = "Geomean Criterion",value=geom_crit)),
+                                     mainPanel(plotOutput("Time_Series"),
+                                               hr(),
+                                               br(),
+                                               div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
                                      sidebarPanel(selectInput("site2",
@@ -70,28 +68,24 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      br(),
                                      uiOutput("unit_type"),
                                      checkboxInput("medplot", label = strong("View Medians and Quartiles"))),
-                                     mainPanel(tabsetPanel(id="monthstuff",
-                                                           tabPanel("Plot",plotOutput("Monthly_Geomeans", height="700px")),
-                                                           tabPanel("Data",
-                                                                    DT::dataTableOutput("Monthly_Data", height=500))))),
+                                     mainPanel(plotOutput("Monthly_Geomeans", height="700px"),
+                                               DT::dataTableOutput("Monthly_Data", height=500))),
                             tabPanel("Rec/Non-Rec Season",
                                      h3("Bacterial Concentrations/Loadings in Recreation/Non-Recreation Seasons"),
-                                     selectInput("site3",
+                                     sidebarPanel(selectInput("site3",
                                                  label = "Site Name",
                                                  choices=c(unique(rec.dat$ML_Name))),
                                      uiOutput("unit_type1"),
-                                     checkboxInput("medplot1", label = strong("View Medians and Quartiles")),
-                                     hr(),
-                                     plotOutput("Rec_Geomeans", height="700px")),
+                                     checkboxInput("medplot1", label = strong("View Medians and Quartiles"))),
+                                     mainPanel(plotOutput("Rec_Geomeans", height="700px"))),
                             tabPanel("Irrigation/Non-Irrigation Season",
                                      h3("Bacterial Concentrations/Loadings in Irrigation/Non-Irrigation Seasons"),
-                                     selectInput("site4",
+                                     sidebarPanel(selectInput("site4",
                                                  label = "Site Name",
                                                  choices=c(unique(irg.dat$ML_Name))),
                                      uiOutput("unit_type2"),
-                                     checkboxInput("medplot2", label = strong("View Medians and Quartiles")),
-                                     hr(),
-                                     plotOutput("Irg_Geomeans", height="700px")),
+                                     checkboxInput("medplot2", label = strong("View Medians and Quartiles"))),
+                                     mainPanel(plotOutput("Irg_Geomeans", height="700px"))),
                             tabPanel("User Guide",
                                      includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
 )
@@ -105,15 +99,16 @@ server <- function(input, output) {
       insertTab(inputId="all_the_things",
                 tabPanel("Load Duration Curves",
                          h3("Bacterial Loadings Across Flow Regimes"),
-                         selectInput("site1",
+                         sidebarPanel(selectInput("site1",
                                      label = "Site Name",
                                      choices=c(unique(loading.dat$ML_Name))),
                          selectInput("pt_type",
                                      label = "Data Category",
-                                     choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")),
-                         hr(),
-                         plotOutput("LDC", width="100%", height="700px")
-                ), target="User Guide")
+                                     choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")), width = 3),
+                         mainPanel(plotOutput("LDC", width="100%", height="700px"),
+                                   hr(),
+                                   div(DT::dataTableOutput("LDC_Data", height=20),style="font-size:75%"))), 
+                target="User Guide")
     }
   })
   
@@ -159,6 +154,7 @@ server <- function(input, output) {
   
   observe({
     x = ecoli.dat[ecoli.dat$ML_Name %in% input$checkbox,]
+    x$E.coli_Geomean = round(x$E.coli_Geomean,1)
     timeseriesdat$min = input$dateRange[1]
     timeseriesdat$max = input$dateRange[2]
     timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
@@ -201,13 +197,21 @@ server <- function(input, output) {
   
   output$Time_Data <- renderDT(timeseriesdat$x,
                                rownames = FALSE,
-                               options = list(dom="ft", pageLength = 1000, lengthChange = FALSE, scrollY = "800px"))
+                               options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
   ################ LDC #####################
+  ldcdata <- reactiveValues()
+  
+  observe({
+    x <- loading.dat[loading.dat$ML_Name==input$site1,]
+    nums <- unlist(lapply(x, is.numeric))
+    x[,nums] = round(x[,nums],1)
+    ldcdata$x <- x
+  })
   
   output$LDC <- renderPlot({
     req(input$pt_type)
     req(input$site1)
-    x <- loading.dat[loading.dat$ML_Name==input$site1,]
+    x <- ldcdata$x
     flow.plot <- x[order(x$Flow_Percentile),]
     
     # Pull out observed loadings (E.coli data)
@@ -264,7 +268,10 @@ server <- function(input, output) {
     }
   })
   
-    
+  output$LDC_Data <- renderDT(ldcdata$x,
+                               rownames = FALSE,
+                               options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+  
   ################ MONTHLY #####################   
   output$dateRange1 <- renderUI({
     mondat = ecoli.dat[ecoli.dat$ML_Name==input$site2,]
@@ -278,6 +285,9 @@ server <- function(input, output) {
                    max=maxd)
   })
   
+  monthlygeomeans <- reactive({
+    
+  })
   
   output$Monthly_Geomeans <- renderPlot({
     req(input$unit_type)
