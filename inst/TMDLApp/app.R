@@ -61,7 +61,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                             
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
-                                     selectInput("site2",
+                                     sidebarPanel(selectInput("site2",
                                                  label = "Site Name",
                                                  choices=c(unique(month.dat$ML_Name))),
                                      div(id="date1",uiOutput("dateRange1")),
@@ -69,9 +69,11 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      br(),
                                      br(),
                                      uiOutput("unit_type"),
-                                     checkboxInput("medplot", label = strong("View Medians and Quartiles")),
-                                     hr(),
-                                     plotOutput("Monthly_Geomeans", height="700px")),
+                                     checkboxInput("medplot", label = strong("View Medians and Quartiles"))),
+                                     mainPanel(tabsetPanel(id="monthstuff",
+                                                           tabPanel("Plot",plotOutput("Monthly_Geomeans", height="700px")),
+                                                           tabPanel("Data",
+                                                                    DT::dataTableOutput("Monthly_Data", height=500))))),
                             tabPanel("Rec/Non-Rec Season",
                                      h3("Bacterial Concentrations/Loadings in Recreation/Non-Recreation Seasons"),
                                      selectInput("site3",
@@ -262,6 +264,8 @@ server <- function(input, output) {
     }
   })
   
+    
+  ################ MONTHLY #####################   
   output$dateRange1 <- renderUI({
     mondat = ecoli.dat[ecoli.dat$ML_Name==input$site2,]
     maxd = max(mondat$Date)
@@ -274,7 +278,6 @@ server <- function(input, output) {
                    max=maxd)
   })
   
-  ################ MONTHLY #####################   
   
   output$Monthly_Geomeans <- renderPlot({
     req(input$unit_type)
