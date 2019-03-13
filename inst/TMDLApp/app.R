@@ -1,6 +1,6 @@
 ################## SHINY APP ##########################################
 
-#wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
+wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -88,7 +88,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
              hr(),
              plotOutput("Irg_Geomeans", height="700px")),
     tabPanel("User Guide",
-             includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
+             includeMarkdown("user_guide.Rmd")))
 )
 
 # Define server logic required to draw a histogram
