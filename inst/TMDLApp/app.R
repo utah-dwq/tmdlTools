@@ -1,4 +1,10 @@
 ################## SHINY APP ##########################################
+require(openxlsx)
+require(ggplot2)
+require(yarrr)
+require(reshape2)
+require(colorspace)
+require(lubridate)
 
 #wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\NFVR_data_EH_2019-02-25.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
