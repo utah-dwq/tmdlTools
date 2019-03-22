@@ -27,23 +27,23 @@
 # library(dplyr)
 # library(shiny)
 
-### TESTING ####
-# tmdlCalcs(wb_path="C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx", specs=TRUE, overwrite = FALSE)
-# # 
-# wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_noflow.xlsx"
+# ### TESTING ####
+# tmdlCalcs(wb_path=wb_path, specs=TRUE, overwrite = FALSE)
+# # # 
+# wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
 # specs = TRUE
-# rec_ssn = c("05-01","10-31")
-# irg_ssn = c("05-15","10-15")
+# # rec_ssn = c("05-01","10-31")
+# # irg_ssn = c("05-15","10-15")
 # overwrite=FALSE
 
 tmdlCalcs <- function(wb_path, 
                          specs = TRUE,
-                         rec_ssn = c("05-01","10-31"),
-                         irg_ssn = c("05-15","10-15"),
                          geom_crit,
                          max_crit, 
                          mos = .1, 
                          cf=1000/100*28.3168*3600*24, 
+                         rec_ssn = c("05-01","10-31"),
+                         irg_ssn = c("05-15","10-15"),
                          overwrite=FALSE){
   
   ## Calculation functions needed for plotting and assessment ## 
@@ -70,11 +70,16 @@ tmdlCalcs <- function(wb_path,
     max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
     cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
     mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
+    rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
+    irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
   }else{ # Otherwise, use user-defined inputs to function.
+    print("Input tab not detected. tmdlCalcs will use user-specified or default criteria, correction factor, MOS, and season lengths.")
     geom_crit = geom_crit
     max_crit = max_crit
     cf = cf
     mos = mos
+    rec_ssn = rec_ssn
+    irg_ssn = irg_ssn
   }
   
   ### Convert any "<" to min and max detection limits
