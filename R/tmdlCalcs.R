@@ -2,14 +2,7 @@
 #' 
 #' This function takes E.coli concentration and flow data (if applicable) to calculate geomean concentrations and loadings on a daily, monthly, rec-season, and irrigation season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
 #' @param wb_path A file path to the .xlsx file containing E.coli and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.
-#' @param specs Logical. If TRUE, uses geom_crit, max_crit, and mos from workbook. If FALSE, function requires inputs of geom_crit, max_crit, and mos.
-#' @param rec_ssn A character string defining the recreation season over which to calculate geometric means. Defaults to May 1 to October 31.
-#' @param irg_ssn A character string defining the irrigation season over which to calculate geometric means. Defaults to May 15 to October 15.
-#' @param geom_crit Numeric. The geometric mean criterion for the E.coli dataset, taken from R317-2-14.
-#' @param max_crit Numeric. The maximum criterion for the E.coli dataset, taken from R317-2-14.
-#' @param cf Numeric. A correction factor to convert E.coli concentrations and flow data to loadings (amount per day). Default converts MPN/100 mL and cfs to MPN/day.
-#' @param mos Numeric proportion. The percent margin of safety (as a proportion) to use when calculating percent exceedance/reduction needed.
-#' @param overwrite Logical. If TRUE, function updates input .xlsx file. If FALSE, function writes a new workbook with the name of the original file plus today's date.xlsx.
+#' @return The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly geomeans, rec/non rec geomeans, and irg/non irg geomeans.
 #' @export tmdlCalcs
 #' @importFrom dplyr percent_rank
 #' @importFrom openxlsx loadWorkbook
@@ -31,20 +24,11 @@
 # tmdlCalcs(wb_path=wb_path, specs=TRUE, overwrite = FALSE)
 # # # 
 # wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
-# specs = TRUE
-# # rec_ssn = c("05-01","10-31")
-# # irg_ssn = c("05-15","10-15")
 # overwrite=FALSE
 
-tmdlCalcs <- function(wb_path, 
-                         specs = TRUE,
-                         geom_crit,
-                         max_crit, 
-                         mos = .1, 
-                         cf=1000/100*28.3168*3600*24, 
-                         rec_ssn = c("05-01","10-31"),
-                         irg_ssn = c("05-15","10-15"),
-                         overwrite=FALSE){
+tmdlCalcs <- function(wb_path,overwrite=FALSE){
+  
+  calcs <- list()
   
   ## Calculation functions needed for plotting and assessment ## 
   gmean=function(x){exp(mean(log(x)))} # geometric mean
@@ -63,8 +47,7 @@ tmdlCalcs <- function(wb_path,
 
   
   ### Obtain criteria from specs.dat sheet or function inputs ###
-  # If xlsx workbook contains worksheet "Inputs", then pull criteria and other inputs from that... 
-  if(specs){
+  if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
     specs.dat <- readWorkbook(wb.dat, sheet="Inputs",startRow=1)
     geom_crit = specs.dat[specs.dat$Parameter=="Geometric Mean Criterion","Value"]
     max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
@@ -72,16 +55,7 @@ tmdlCalcs <- function(wb_path,
     mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
     rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
     irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
-  }else{ # Otherwise, use user-defined inputs to function.
-    print("Input tab not detected. tmdlCalcs will use user-specified or default criteria, correction factor, MOS, and season lengths.")
-    geom_crit = geom_crit
-    max_crit = max_crit
-    cf = cf
-    mos = mos
-    rec_ssn = rec_ssn
-    irg_ssn = irg_ssn
-  }
-  
+
   ### Convert any "<" to min and max detection limits
   ecoli.dat$E.coli=gsub("<1",1,ecoli.dat$E.coli)
   ecoli.dat$E.coli=as.numeric(gsub(">2419.6",2420,ecoli.dat$E.coli))
@@ -119,6 +93,9 @@ tmdlCalcs <- function(wb_path,
   irg_ssn1 = yday(as.Date(irg_ssn, "%m-%d"))
   ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn1[1]&yday(ecoli.day.gmean$Date)<=irg_ssn1[2],"Irrigation Season","Not Irrigation Season")
   
+  # Add to list
+  calcs$ecoli <- ecoli.day.gmean
+  
   # Write daily geometric mean data to new datasheet 
     if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
     addWorksheet(wb.dat, "Daily_Geomean_Data", gridLines = TRUE)
@@ -126,6 +103,10 @@ tmdlCalcs <- function(wb_path,
   
   ###### LOAD DURATION CALCULATIONS, MONTHLY LOADS/REC SEASON/IRG SEASON AND PERC REDUCTION #######
   if(flo.dat){
+    
+    # Add to list
+    calcs$flow <- flow.dat
+    
     ## Create loading dataset
     ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
     ecoli.flow.dat$Loading_Capacity <- ecoli.flow.dat$Flow*geom_crit*cf
@@ -142,6 +123,9 @@ tmdlCalcs <- function(wb_path,
     
     # Apply percentile calc to data
     ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
+    
+    # Add to list
+    calcs$ldc <- ldc.dat
     
     # Write load duration curve data to new datasheet 
     if(!any(wb.dat$sheet_names=="LDC_Data")){
@@ -194,6 +178,9 @@ tmdlCalcs <- function(wb_path,
   # Merge monthly data and write to new datasheet 
     month.dat = merge(concen_mo,mo_load, all=TRUE)
     
+    # Add to list
+    calcs$month <- month.dat
+    
     if(!any(wb.dat$sheet_names=="Monthly_Data")){
       addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
       writeData(wb.dat, sheet = "Monthly_Data", month.dat, rowNames = FALSE)}
@@ -201,12 +188,18 @@ tmdlCalcs <- function(wb_path,
   # Merge rec season data and write to new datasheet
     rec.dat = merge(rec_load,concen_rec, all=TRUE)
     
+    # Add to list
+    calcs$rec <- rec.dat
+    
     if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
       addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
       writeData(wb.dat, sheet = "Rec_Season_Data", rec.dat, rowNames = FALSE)}
   
   # Merge irrigation season data and write to new datasheet
     irg.dat = merge(irg_load, concen_irg, all=TRUE)
+    
+    # Add to list
+    calcs$irg <- irg.dat
   
     if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
       addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
@@ -217,7 +210,7 @@ tmdlCalcs <- function(wb_path,
     saveWorkbook(wb.dat, wb_path, overwrite = TRUE)
   }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)}
 
-  
+  return(calcs)
   # ############################## PLOTTING USING FUNCTIONS ABOVE ###################
   # if(plot_it){
   #   by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=TRUE, wndws=FALSE) # time series plots

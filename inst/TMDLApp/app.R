@@ -7,27 +7,27 @@ require(yarrr)
 require(colorspace)
 require(reshape2)
 require(markdown)
-wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
-wb.dat <- openxlsx::loadWorkbook(wb_path)
-ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
-ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
-if("Flow_data"%in%wb.dat$sheet_names){
-  flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
-  flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30")
-}
-if("LDC_Data"%in%wb.dat$sheet_names){
-  loading.dat <- openxlsx::readWorkbook(wb.dat, sheet="LDC_Data")
-  loading.dat$Date <- as.Date(loading.dat$Date, origin="1899-12-30")
-}else{loading.dat=NULL}
-month.dat <- openxlsx::readWorkbook(wb.dat,sheet="Monthly_Data",startRow=1)
-rec.dat <- openxlsx::readWorkbook(wb.dat,sheet="Rec_Season_Data",startRow=1)
-irg.dat <- openxlsx::readWorkbook(wb.dat,sheet="Irg_Season_Data",startRow=1)
-specs <- openxlsx::readWorkbook(wb.dat,sheet="Inputs",startRow=1)
-
-max_crit = specs$Value[specs$Parameter=="Max Criterion"]
-geom_crit = specs$Value[specs$Parameter=="Geometric Mean Criterion"]
-cf = specs$Value[specs$Parameter=="Correction Factor"]
-mos = specs$Value[specs$Parameter=="Margin of Safety"]
+# wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
+# wb.dat <- openxlsx::loadWorkbook(wb_path)
+# ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
+# ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
+# if("Flow_data"%in%wb.dat$sheet_names){
+#   flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
+#   flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30")
+# }
+# if("LDC_Data"%in%wb.dat$sheet_names){
+#   loading.dat <- openxlsx::readWorkbook(wb.dat, sheet="LDC_Data")
+#   loading.dat$Date <- as.Date(loading.dat$Date, origin="1899-12-30")
+# }else{loading.dat=NULL}
+# month.dat <- openxlsx::readWorkbook(wb.dat,sheet="Monthly_Data",startRow=1)
+# rec.dat <- openxlsx::readWorkbook(wb.dat,sheet="Rec_Season_Data",startRow=1)
+# irg.dat <- openxlsx::readWorkbook(wb.dat,sheet="Irg_Season_Data",startRow=1)
+# specs <- openxlsx::readWorkbook(wb.dat,sheet="Inputs",startRow=1)
+# 
+# max_crit = specs$Value[specs$Parameter=="Max Criterion"]
+# geom_crit = specs$Value[specs$Parameter=="Geometric Mean Criterion"]
+# cf = specs$Value[specs$Parameter=="Correction Factor"]
+# mos = specs$Value[specs$Parameter=="Margin of Safety"]
 
 perc.red <- function(x,y){100-x/y*100}
 
@@ -35,6 +35,15 @@ perc.red <- function(x,y){100-x/y*100}
 ui <- fluidPage(title="E.coli Data Explorer",
                 titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
                 tabsetPanel(id="all_the_things",
+                            tabPanel("Upload Data",
+                                     h3("Select your Excel workbook containing E.coli data"),
+                                     sidebarPanel(fileInput("workbook","Select Workbook")),
+                                     mainPanel(
+                                       tabsetPanel(
+                                         tabPanel("Parameter Data", DTOutput("parameterdat")),
+                                         tabPanel("Flow Data", DTOutput("flowdat"))
+                                       )
+                                     )),
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
                                      h3("Bacterial Concentrations Over Time by Site"),
@@ -92,10 +101,53 @@ ui <- fluidPage(title="E.coli Data Explorer",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  # File Info
+  workbook <- reactiveValues()
+  # Obtain file path
+  observeEvent(input$workbook,{
+    fileup = input$workbook
+    wb_path = fileup$datapath
+  # Run through TMDLcalcs
+    tmdlTools::tmdlCalcs(wb_path, overwrite = FALSE)
+    wb.dat <- openxlsx::loadWorkbook(wb_path)
+    ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
+    ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
+    workbook$ecoli = ecoli.dat
+    if("Flow_data"%in%wb.dat$sheet_names){
+      flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
+      flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30")
+      workbook$flow = flow.dat
+    }
+    if("LDC_Data"%in%wb.dat$sheet_names){
+      loading.dat <- openxlsx::readWorkbook(wb.dat, sheet="LDC_Data")
+      loading.dat$Date <- as.Date(loading.dat$Date, origin="1899-12-30")
+      workbook$loading = loading.dat
+    }else{loading.dat=NULL}
+    month.dat <- openxlsx::readWorkbook(wb.dat,sheet="Monthly_Data",startRow=1)
+    workbook$month = month.dat
+    rec.dat <- openxlsx::readWorkbook(wb.dat,sheet="Rec_Season_Data",startRow=1)
+    workbook$rec = rec.dat
+    irg.dat <- openxlsx::readWorkbook(wb.dat,sheet="Irg_Season_Data",startRow=1)
+    workbook$irg = irg.dat
+    specs <- openxlsx::readWorkbook(wb.dat,sheet="Inputs",startRow=1)
+    
+    workbook$max_crit = specs$Value[specs$Parameter=="Max Criterion"]
+    workbook$geom_crit = specs$Value[specs$Parameter=="Geometric Mean Criterion"]
+    workbook$cf = specs$Value[specs$Parameter=="Correction Factor"]
+    workbook$mos = specs$Value[specs$Parameter=="Margin of Safety"]
+  })
 
-  ############## UI RELATED ####################
+# Load data tables on first page
+  output$parameterdat <- renderDT(workbook$ecoli,
+                                  rownames = FALSE, 
+                                  options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+  output$flowdat <- renderDT(workbook$flow,
+                             rownames = FALSE, 
+                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+
+ # Include LDC tab if flow data present
   observe({
-    if(!is.null(loading.dat)){
+    if(!is.null(workbook$loading)){
       insertTab(inputId="all_the_things",
                 tabPanel("Load Duration Curves",
                          h3("Bacterial Loadings Across Flow Regimes"),
