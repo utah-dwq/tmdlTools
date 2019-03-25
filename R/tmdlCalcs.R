@@ -39,6 +39,10 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
   wb.dat <- loadWorkbook(wb_path)
   ecoli.dat <- readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
   ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
+  
+  # Add to list
+  calcs$Ecoli_data <- ecoli.dat
+  
   if("Flow_data"%in%wb.dat$sheet_names){
     flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
     flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30") 
