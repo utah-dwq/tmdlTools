@@ -77,6 +77,7 @@ server <- function(input, output) {
    convertds1 = format(convertds1, "%b %d")
    out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
    workbook$ecoli = out$Ecoli_data
+   out$Daily_Geomean_Data$E.coli_Geomean = round(out$Daily_Geomean_Data$E.coli_Geomean,1)
    workbook$dailyvalues = out$Daily_Geomean_Data
    workbook$month = out$Monthly_Data
    workbook$rec = out$Rec_Season_Data
@@ -103,9 +104,100 @@ server <- function(input, output) {
   output$inputdat <- renderDT(workbook$inputs,
                              rownames = FALSE, 
                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
- 
-}
+### Time Series Tab ###
+  
+  observeEvent(input$tmdltool, {
+      insertTab(inputId = "all_the_things",
+                tabPanel("Time Series",
+                shinyjs::useShinyjs(),
+                h3("Bacterial Concentrations Over Time by Site"),
+                sidebarPanel(selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
+                            div(id = "date",
+                                uiOutput("tsdatrange")),
+                            actionButton("reset_input","Reset Date Range"),
+                            br(),
+                            br(),
+                            uiOutput("checkbox")),
+                mainPanel(plotOutput("Time_Series"),
+                         hr(),
+                         br(),
+                         div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),target="User Guide")
+  })
 
+
+output$tsdatrange <- renderUI({
+  timeseries <- isolate(workbook$dailyvalues)
+  print(min(timeseries$Date))
+  sliderInput("tsdatrange",
+                 label="Date Range",
+                 min=min(timeseries$Date),
+                 max=max(timeseries$Date),
+                 value = c(min(timeseries$Date),max(timeseries$Date)),
+                 dragRange = TRUE, timeFormat="%Y-%m-%d")
+})
+
+observeEvent(input$reset_input,{
+  reset("date")})
+
+output$checkbox <- renderUI({
+  timeseries <- isolate(workbook$dailyvalues)
+  choice <-  unique(timeseries$ML_Name)
+  checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
+  
+})
+
+timeseriesdat <- reactiveValues()
+
+observe({
+  req(input$checkbox)
+  print(input$tsdatrange)
+  x = isolate(workbook$dailyvalues)
+  x = x[x$ML_Name %in% input$checkbox,]
+  timeseriesdat$min = input$tsdatrange[1]
+  timeseriesdat$max = input$tsdatrange[2]
+  timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
+})
+
+output$Time_Series <- renderPlot({
+  req(input$checkbox)
+  req(input$tsdatrange[1],input$tsdatrange[2])
+  x = timeseriesdat$x
+  min = timeseriesdat$min
+  max = timeseriesdat$max
+  # Get number of sites
+  uni.sites <- unique(x$ML_Name)
+  colrs <- yarrr::piratepal("basel")
+  
+  # Create an empty plot
+  plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
+  axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
+  abline(h=input$crit2,col="orange", lwd=2)
+  abline(h=input$crit1, col="red", lwd=2)
+  text(min+150,as.numeric(input$crit1)-100, "Max Crit")
+  text(min+400,as.numeric(input$crit2)-100, "Geometric Mean Crit")
+  site = vector()
+  colr = vector()
+  # Start plotting
+  for(i in 1:length(uni.sites)){
+    y = x[x$ML_Name==uni.sites[i],]
+    perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(input$crit1)])/length(y$E.coli_Geomean)*100, digits=0)
+    if(input$plottype=="Line"){
+      lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])
+    }
+    points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=colrs[i])
+    site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
+    colr[i] = colrs[i]
+  }
+  l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1)
+})
+
+
+
+output$Time_Data <- renderDT(timeseriesdat$x,
+                             rownames = FALSE,
+                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+
+}
 # Run the application
 shinyApp(ui = ui, server = server)
 
