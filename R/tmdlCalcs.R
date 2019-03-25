@@ -99,7 +99,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
   ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn1[1]&yday(ecoli.day.gmean$Date)<=irg_ssn1[2],"Irrigation Season","Not Irrigation Season")
   
   # Add to list
-  calcs$ecoli <- ecoli.day.gmean
+  calcs$Daily_Geomean_Data <- ecoli.day.gmean
   
   # Write daily geometric mean data to new datasheet 
     if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
@@ -110,7 +110,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
   if(flo.dat){
     
     # Add to list
-    calcs$flow <- flow.dat
+    calcs$Flow_data <- flow.dat
     
     ## Create loading dataset
     ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
@@ -130,7 +130,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
     
     # Add to list
-    calcs$ldc <- ldc.dat
+    calcs$LDC_Data <- ldc.dat
     
     # Write load duration curve data to new datasheet 
     if(!any(wb.dat$sheet_names=="LDC_Data")){
@@ -184,7 +184,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     month.dat = merge(concen_mo,mo_load, all=TRUE)
     
     # Add to list
-    calcs$month <- month.dat
+    calcs$Monthly_Data <- month.dat
     
     if(!any(wb.dat$sheet_names=="Monthly_Data")){
       addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
@@ -194,7 +194,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     rec.dat = merge(rec_load,concen_rec, all=TRUE)
     
     # Add to list
-    calcs$rec <- rec.dat
+    calcs$Rec_Season_Data <- rec.dat
     
     if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
       addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
@@ -204,7 +204,7 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     irg.dat = merge(irg_load, concen_irg, all=TRUE)
     
     # Add to list
-    calcs$irg <- irg.dat
+    calcs$Irg_Season_Data <- irg.dat
   
     if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
       addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
