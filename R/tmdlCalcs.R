@@ -49,17 +49,16 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
   ### Obtain criteria from specs.dat sheet or function inputs ###
   if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
     specs.dat <- readWorkbook(wb.dat, sheet="Inputs",startRow=1)
+    
+    # Add to list
+    calcs$Inputs <- specs.dat
+    
     geom_crit = specs.dat[specs.dat$Parameter=="Geometric Mean Criterion","Value"]
     max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
     cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
     mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
     rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
     irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
-
-  calcs$geom_crit = geom_crit
-  calcs$max_crit = max_crit
-  calcs$cf = cf
-  calcs$mos = mos
     
   ### Convert any "<" to min and max detection limits
   ecoli.dat$E.coli=gsub("<1",1,ecoli.dat$E.coli)
