@@ -7,7 +7,7 @@ require(yarrr)
 require(colorspace)
 require(reshape2)
 require(markdown)
-wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
+#wb_path <- "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data_2019-02-22.xlsx"
 wb.dat <- openxlsx::loadWorkbook(wb_path)
 ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Daily_Geomean_Data",startRow=1)
 ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
@@ -87,7 +87,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      checkboxInput("medplot2", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Irg_Geomeans", height="700px"))),
                             tabPanel("User Guide",
-                                     includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd")))
+                                     includeMarkdown("user_guide.Rmd")))
 )
 
 # Define server logic required to draw a histogram
