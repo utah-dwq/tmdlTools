@@ -28,7 +28,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                        )
                                      )),
                             tabPanel("User Guide",
-                                     includeMarkdown("C:\\Users\\ehinman\\Documents\\GitHub\\tmdlTools\\user_guide\\user_guide.Rmd"))
+                                     includeMarkdown("user_guide.Rmd"))
               )
 )
 
