@@ -4,10 +4,12 @@
 \alias{tmdlCalcs}
 \title{Prep data for TMDL analysis and plotting}
 \usage{
-tmdlCalcs(wb_path, overwrite = FALSE)
+tmdlCalcs(wb_path, exportfromfunc = FALSE)
 }
 \arguments{
 \item{wb_path}{A file path to the .xlsx file containing E.coli and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.}
+
+\item{exportfromfunc}{Logical. Indicates whether workbook should be exported from tmdlCalcs function, or skipped if using Shiny interface. Default is FALSE to accommodate Shiny use.}
 }
 \value{
 The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly geomeans, rec/non rec geomeans, and irg/non irg geomeans.

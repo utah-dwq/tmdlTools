@@ -2,6 +2,7 @@
 #' 
 #' This function takes E.coli concentration and flow data (if applicable) to calculate geomean concentrations and loadings on a daily, monthly, rec-season, and irrigation season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
 #' @param wb_path A file path to the .xlsx file containing E.coli and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.
+#' @param exportfromfunc Logical. Indicates whether workbook should be exported from tmdlCalcs function, or skipped if using Shiny interface. Default is FALSE to accommodate Shiny use.
 #' @return The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly geomeans, rec/non rec geomeans, and irg/non irg geomeans.
 #' @export tmdlCalcs
 #' @importFrom dplyr percent_rank
@@ -26,7 +27,7 @@
 # wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
 # overwrite=FALSE
 
-tmdlCalcs <- function(wb_path,overwrite=FALSE){
+tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   
   calcs <- list()
   
@@ -104,11 +105,6 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
   # Add to list
   calcs$Daily_Geomean_Data <- ecoli.day.gmean
   
-  # Write daily geometric mean data to new datasheet 
-    if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
-    addWorksheet(wb.dat, "Daily_Geomean_Data", gridLines = TRUE)
-    writeData(wb.dat, sheet = "Daily_Geomean_Data", ecoli.day.gmean, rowNames = FALSE)}
-  
   ###### LOAD DURATION CALCULATIONS, MONTHLY LOADS/REC SEASON/IRG SEASON AND PERC REDUCTION #######
   if(flo.dat){
     
@@ -134,12 +130,6 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     
     # Add to list
     calcs$LDC_Data <- ldc.dat
-    
-    # Write load duration curve data to new datasheet 
-    if(!any(wb.dat$sheet_names=="LDC_Data")){
-      addWorksheet(wb.dat, "LDC_Data", gridLines = TRUE)
-      writeData(wb.dat, sheet = "LDC_Data", ldc.dat, rowNames = FALSE)
-    }  
 
     # Continue forward with loadings only for records with E.coli concentrations
     ecoli.ldc <- ldc.dat[!is.na(ldc.dat$E.coli_Geomean),]
@@ -189,36 +179,49 @@ tmdlCalcs <- function(wb_path,overwrite=FALSE){
     # Add to list
     calcs$Monthly_Data <- month.dat
     
-    if(!any(wb.dat$sheet_names=="Monthly_Data")){
-      addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
-      writeData(wb.dat, sheet = "Monthly_Data", month.dat, rowNames = FALSE)}
- 
   # Merge rec season data and write to new datasheet
     rec.dat = merge(rec_load,concen_rec, all=TRUE)
     
     # Add to list
     calcs$Rec_Season_Data <- rec.dat
     
-    if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
-      addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
-      writeData(wb.dat, sheet = "Rec_Season_Data", rec.dat, rowNames = FALSE)}
-  
   # Merge irrigation season data and write to new datasheet
     irg.dat = merge(irg_load, concen_irg, all=TRUE)
     
     # Add to list
     calcs$Irg_Season_Data <- irg.dat
-  
+
+  ############################ SAVE WORKBOOK FILE WITH NEW SHEETS #########################
+  if(exportfromfunc){
+    # Create workbooks for each data frame
+    # Daily geomeans
+    if(!any(wb.dat$sheet_names=="Daily_Geomean_Data")){
+      addWorksheet(wb.dat, "Daily_Geomean_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Daily_Geomean_Data", ecoli.day.gmean, rowNames = FALSE)}
+    
+    # Monthly geomeans
+    if(!any(wb.dat$sheet_names=="Monthly_Data")){
+      addWorksheet(wb.dat, "Monthly_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Monthly_Data", month.dat, rowNames = FALSE)}
+    
+    # Rec Season geomeans
+    if(!any(wb.dat$sheet_names=="Rec_Season_Data")){
+      addWorksheet(wb.dat, "Rec_Season_Data", gridLines = TRUE)
+      writeData(wb.dat, sheet = "Rec_Season_Data", rec.dat, rowNames = FALSE)}
+    
+    # Irrigation Season geomeans
     if(!any(wb.dat$sheet_names=="Irg_Season_Data")){
       addWorksheet(wb.dat, "Irg_Season_Data", gridLines = TRUE)
       writeData(wb.dat, sheet = "Irg_Season_Data", irg.dat, rowNames = FALSE)}
+    if(flo.dat){
+      if(!any(wb.dat$sheet_names=="LDC_Data")){
+        addWorksheet(wb.dat, "LDC_Data", gridLines = TRUE)
+        writeData(wb.dat, sheet = "LDC_Data", ldc.dat, rowNames = FALSE)}
+    }
+      
+    saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)}
   
-  ############################ SAVE WORKBOOK FILE WITH NEW SHEETS #########################
-  if(overwrite){
-    saveWorkbook(wb.dat, wb_path, overwrite = TRUE)
-  }else{saveWorkbook(wb.dat, paste0(unlist(strsplit(wb_path,".xlsx")),"_",Sys.Date(),".xlsx"), overwrite = TRUE)}
-
-  return(calcs)
+    return(calcs)
   # ############################## PLOTTING USING FUNCTIONS ABOVE ###################
   # if(plot_it){
   #   by(ecoli.day.gmean,ecoli.day.gmean[,c("MLID","ML_Name")],plotTimeSeries, max_crit=max_crit, yeslines=TRUE, wndws=FALSE) # time series plots
