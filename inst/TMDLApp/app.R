@@ -19,7 +19,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      h3("Select your Excel workbook containing E.coli data"),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
                                                   uiOutput("tmdltool"),
-                                                  uiOutput("selectsheet")),
+                                                  uiOutput("selectsheet"),
+                                                  uiOutput("dwnloadbutton")),
                                      mainPanel(
                                        tabsetPanel(
                                          tabPanel("Data View", DTOutput("datview"), style= "font-size:75%"),
@@ -46,11 +47,15 @@ server <- function(input, output) {
     req(input$workbook)
     radioButtons("tmdltool", label = "Run tmdlTools?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
   })
+output$dwnloadbutton <- renderUI({
+  req(input$selectsheet)
+  downloadButton("export_tmdltools","Export tmdlTools output")
+})
  
  observeEvent(input$tmdltool,{
    disable("tmdltool")
  })
-
+ 
 # Create drop down menu of sheets contained in xlsx file
 
  output$selectsheet <- renderUI({
@@ -60,6 +65,8 @@ server <- function(input, output) {
                                                                                           "Monthly Geomeans" = "month", "Rec/Non-Rec Geomeans"= "rec",
                                                                                           "Irrigation/Non-Irrigation Geomeans"="irg"))
  })
+
+
  
 ### Reading in the data from the file to the reactive environment ### 
  observe({
@@ -89,6 +96,33 @@ server <- function(input, output) {
      workbook$ldc = out$LDC_Data
    }
  })
+
+ # Object to be fed to the download handler
+ wbdwn <- reactiveValues()
+ 
+ # Create workbook where each workbook reactive values object is added to the wbdwn reactive values object for use in download handler.
+ observe({
+   req(workbook$inputs)
+   wbdownload <- isolate(reactiveValuesToList(workbook))
+   wbdownload$wb_path = NULL
+   
+   wb <- openxlsx::createWorkbook()
+   
+   for(i in 1:length(wbdownload)){
+     addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
+     writeData(wb, sheet = names(wbdownload)[i], wbdownload[i], rowNames = FALSE)
+   }
+   wbdwn$outputworkbook = wb
+ })
+ 
+ # Download results of tmdlTools
+ output$export_tmdltools <- downloadHandler(
+   filename = paste0(unlist(strsplit(input$workbook$name,".xlsx")),"_",Sys.Date(),".xlsx"),
+   content = function(file) {
+     openxlsx::saveWorkbook(isolate(wbdwn$outputworkbook), file)
+   }
+ )
+ 
  
  observe({
    req(input$selectsheet)
@@ -161,9 +195,15 @@ observe({
 output$Time_Series <- renderPlot({
   req(input$checkbox)
   req(input$tsdatrange[1],input$tsdatrange[2])
+  
+  # Plot inputs from reactive values
   x = timeseriesdat$x
   min = timeseriesdat$min
   max = timeseriesdat$max
+  crits = isolate(workbook$inputs)
+  maxcrit = crits$Value[crits$Parameter == "Max Criterion"]
+  geomcrit = crits$Value[crits$Parameter == "Geometric Mean Criterion"]
+  
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
   colrs <- yarrr::piratepal("basel")
@@ -171,10 +211,10 @@ output$Time_Series <- renderPlot({
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=input$crit2,col="orange", lwd=2)
-  abline(h=input$crit1, col="red", lwd=2)
-  text(min+150,as.numeric(input$crit1)-100, "Max Crit")
-  text(min+400,as.numeric(input$crit2)-100, "Geometric Mean Crit")
+  abline(h=maxcrit,col="orange", lwd=2)
+  abline(h=geomcrit, col="red", lwd=2)
+  text(min+150,as.numeric(maxcrit)-100, "Max Crit")
+  text(min+400,as.numeric(geomcrit)-100, "Geometric Mean Crit")
   site = vector()
   colr = vector()
   # Start plotting
