@@ -17,6 +17,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                             tabPanel("Upload Data",
                                      useShinyjs(),
                                      h3("Select your Excel workbook containing E.coli data"),
+                                     tags$strong("NOTE:"),p("Workbooks must fit the E.coli tmdlTools template, but you will have the option in this app to run the tmdlCalcs (e.g. calculate loadings, seasonal geomeans) function on the uploaded dataset."),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
                                                   uiOutput("tmdltool"),
                                                   uiOutput("selectsheet"),
@@ -33,7 +34,6 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      sidebarPanel(selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
-                                                  actionButton("reset_input","Reset Date Range"),
                                                   br(),
                                                   br(),
                                                   uiOutput("checkbox")),
@@ -45,7 +45,6 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      h3("Bacterial Concentrations/Loadings by Month"),
                                      sidebarPanel(uiOutput("monthsite"),
                                                   div(id="date1",uiOutput("mondatrange")),
-                                                  actionButton("reset_input1","Reset Date Range"),
                                                   br(),
                                                   br(),
                                                   uiOutput("unit_type"),
@@ -167,10 +166,21 @@ output$dwnloadbutton <- renderUI({
                              rownames = FALSE, 
                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
 
+## Save Criteria in own reactive values for use in all plots ##
+crits <- reactiveValues()
+
+observe({
+  req(workbook$Inputs)
+  inputs <- isolate(workbook$Inputs)
+  crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
+  crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
+})
+  
 ### TIME SERIES SECTION ###
   
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
+  req(workbook$Daily_Geomean_Data)
   timeseries <- isolate(workbook$Daily_Geomean_Data)
   sliderInput("tsdatrange",
                  label="Date Range",
@@ -181,11 +191,12 @@ output$tsdatrange <- renderUI({
 })
 
 # Reset date range on button click
-observeEvent(input$reset_input,{
-  reset("date")})
+# observeEvent(input$reset_input,{
+#   reset("date")})
 
 # Create checkbox menu based on sites present
 output$checkbox <- renderUI({
+  req(workbook$Daily_Geomean_Data)
   timeseries <- isolate(workbook$Daily_Geomean_Data)
   choice <-  unique(timeseries$ML_Name)
   checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
@@ -211,9 +222,6 @@ output$Time_Series <- renderPlot({
   x = timeseriesdat$x
   min = timeseriesdat$min
   max = timeseriesdat$max
-  crits = isolate(workbook$Inputs)
-  maxcrit = crits$Value[crits$Parameter == "Max Criterion"]
-  geomcrit = crits$Value[crits$Parameter == "Geometric Mean Criterion"]
   
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
@@ -222,16 +230,16 @@ output$Time_Series <- renderPlot({
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=maxcrit,col="orange", lwd=2)
-  abline(h=geomcrit, col="red", lwd=2)
-  text(min+150,as.numeric(maxcrit)-100, paste0("Max Crit - ",maxcrit))
-  text(min+400,as.numeric(geomcrit)-100, paste0("Geometric Mean Crit - ",geomcrit))
+  abline(h=crits$maxcrit,col="orange", lwd=2)
+  abline(h=crits$geomcrit, col="red", lwd=2)
+  text(min+150,crits$maxcrit-100, paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"))
+  text(min+400,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
   site = vector()
   colr = vector()
   # Start plotting
   for(i in 1:length(uni.sites)){
     y = x[x$ML_Name==uni.sites[i],]
-    perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
+    perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
     if(input$plottype=="Line"){
       lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])
     }
@@ -253,15 +261,17 @@ output$Time_Data <- renderDT(timeseriesdat$x,
 
 # Sites to choose from
 output$monthsite <- renderUI({
+  req(workbook$Daily_Geomean_Data)
   monthsites <- isolate(workbook$Monthly_Data)
   monthsites = unique(monthsites$ML_Name)
-  selectInput("site2",
+  selectInput("monthsite",
               label = "Site Name",
               choices=monthsites)
 })
 
 # Dates to choose from
 output$mondatrange <- renderUI({
+  req(workbook$Daily_Geomean_Data)
   monthdata <- isolate(workbook$Daily_Geomean_Data)
   sliderInput("mondatrange",
               label="Date Range",
@@ -272,18 +282,130 @@ output$mondatrange <- renderUI({
 })
 
 # Reset Date Range
-observeEvent(input$reset_input1,{
-  reset("date1")})
+# observeEvent(input$reset_input1,{
+#   reset("date1")})
 
 # Craft drop down menu for concentration and loading
 output$unit_type <- renderUI({
-  monthdata <- isolate(workbook$Daily_Geomean_Data)
-  monthdata = monthdata[monthdata$ML_Name==input$site2&!is.na(monthdata$Observed_Loading),"Observed_Loading"]
+  req(workbook$Daily_Geomean_Data)
+  monthdata <- isolate(workbook$Monthly_Data)
+  monthdata = monthdata[monthdata$ML_Name==input$monthsite&!is.na(monthdata$Observed_Loading),"Observed_Loading"]
   if(length(monthdata)>0){
     subd=c("Concentration","Loading")
   }else{subd=c("Concentration")}
   selectInput("unit_type","Select Measurement Type", choices = subd, selected = subd[1])
 })
+
+# Create dataset for use in plots and tables
+selectedmonthdata <- reactiveValues()
+
+observe({
+  req(input$monthsite)
+  req(input$mondatrange)
+  dailygeomeans <- isolate(workbook$Daily_Geomean_Data)
+  seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>input$mondatrange[1]&dailygeomeans$Date<input$mondatrange[2],]
+  seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
+  selectedmonthdata$seldg = seldailygeomeans
+  aggseldg <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
+  aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
+  selectedmonthdata$aggseldg = aggseldg
+
+})
+
+output$Monthly_Geomeans <- renderPlot({
+  req(selectedmonthdata$aggseldg)
+  barcolors = piratepal(palette="up")
+  if(input$unit_type=="Concentration"){
+    x = isolate(selectedmonthdata$aggseldg)
+    print(x)
+    # Straight bar plot - concentrations
+    uplim = max(x$E.coli_Geomean)*1.2
+    mo_conc.p <- x$E.coli_Geomean
+    barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
+    legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
+    box(bty="l")
+    abline(h=crits$geomcrit, col="black", lwd=2)
+    barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
+    barperc <- barperc[barperc$X3>0,]
+    if(dim(barperc)[1]>0){
+      barperc$X4 <- paste(barperc$X3,"%",sep="")
+      text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1)
+    }
+    if(input$medplot){
+      # Obtain boxplot stats from loading data
+      y = isolate(selectedmonthdata$seldg)
+      y = droplevels(y[order(y$month),])
+      
+      # Get axes right to accommodate boxplot overlay (if checkbox checked)
+      uplim1 = quantile(y$E.coli_Geomean,1)
+      uplim1 = max(uplim, uplim1)
+      
+      # Bar plot
+      barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$month, ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
+      abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
+      legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
+      box(bty="l")
+      
+      # x-axis arguments for boxplot based on barplot placement
+      
+      boxplot(y$E.coli_Geomean~y$month,
+              lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
+    }
+  }
+  if(input$unit_type=="Loading"){
+    cols = piratepal(palette="up")
+    # Narrow dataset
+    monthdatl <- isolate(workbook$LDC_Data)
+    datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>input$mondatrange[1]&monthdatl$Date<input$mondatrange[2],c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
+    if(dim(datrange)[1]>0){
+      datrange <- datrange[!is.na(datrange$Observed_Loading),]
+      datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+      datstack$month = lubridate::month(datstack$Date, label=TRUE)
+      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+      names(datstack)[names(datstack)=="value"]<-"Loading"
+      x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
+      x = dcast(data=x, month~Meas_Type, value.var="Loading")
+      x = x[order(x$month),]
+      x$Percent_Reduction = ifelse(x$Observed_Loading>x$Loading_Capacity_MOS,round(perc.red(x$Loading_Capacity_MOS,x$Observed_Loading), digits=0),0)
+      uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
+      mo_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
+      
+      # Straight bar plots
+      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+      legend("topright",legend=c("Observed Loading","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
+      box(bty="l")
+      barps <- barp[1,]
+      barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
+      barperc <- barperc[barperc$V3>0,]
+      if(dim(barperc)[1]>0){
+        barperc$V3 <- paste(barperc$V3,"%",sep="")
+        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
+      }
+      
+      if(input$medplot){
+        # Get axes right to accommodate boxplot overlay (if checkbox checked)
+        uplim1 = quantile(datstack$Loading,1)
+        uplim1 = max(uplim, uplim1)
+        
+        # Bar plot
+        barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+        legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
+        box(bty="l")
+        
+        # x-axis arguments for boxplot based on barplot placement
+        ax <- c(barp[1,],barp[2,])
+        ax_spots = ax[order(ax)]
+        
+        boxplot(datstack$Loading~datstack$Meas_Type+lubridate::month(datstack$Date),
+                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(cols[1],cols[2]),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+      }
+    }
+  }
+})
+
+
+
+
 
 }
 
