@@ -130,7 +130,7 @@ output$dwnloadbutton <- renderUI({
  # Create workbook where each workbook reactive values object is added to the wbdwn reactive values object for use in download handler.
  observe({
    req(workbook$Inputs)
-   wbdownload <- isolate(reactiveValuesToList(workbook))
+   wbdownload <- reactiveValuesToList(workbook)
    wbdownload$wb_path = NULL
    
    wb <- openxlsx::createWorkbook()
@@ -146,14 +146,14 @@ output$dwnloadbutton <- renderUI({
  output$export_tmdltools <- downloadHandler(
    filename = paste0(unlist(strsplit(input$workbook$name,".xlsx")),"_",Sys.Date(),".xlsx"),
    content = function(file) {
-     openxlsx::saveWorkbook(isolate(wbdwn$outputworkbook), file)
+     openxlsx::saveWorkbook(wbdwn$outputworkbook, file)
    }
  )
  
  
  observe({
    req(input$selectsheet)
-   tableview = isolate(workbook[[input$selectsheet]])
+   tableview = workbook[[input$selectsheet]]
    
    # Load data tables on first page
    output$datview <- renderDT(tableview, 
@@ -171,7 +171,7 @@ crits <- reactiveValues()
 
 observe({
   req(workbook$Inputs)
-  inputs <- isolate(workbook$Inputs)
+  inputs <- workbook$Inputs
   crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
   crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
 })
@@ -181,7 +181,7 @@ observe({
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  timeseries <- isolate(workbook$Daily_Geomean_Data)
+  timeseries <- workbook$Daily_Geomean_Data
   sliderInput("tsdatrange",
                  label="Date Range",
                  min=min(timeseries$Date),
@@ -197,7 +197,7 @@ output$tsdatrange <- renderUI({
 # Create checkbox menu based on sites present
 output$checkbox <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  timeseries <- isolate(workbook$Daily_Geomean_Data)
+  timeseries <- workbook$Daily_Geomean_Data
   choice <-  unique(timeseries$ML_Name)
   checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
   
@@ -207,7 +207,7 @@ output$checkbox <- renderUI({
 timeseriesdat <- reactiveValues()
 observe({
   req(input$checkbox)
-  x = isolate(workbook$Daily_Geomean_Data)
+  x = workbook$Daily_Geomean_Data
   x = x[x$ML_Name %in% input$checkbox,]
   timeseriesdat$min = input$tsdatrange[1]
   timeseriesdat$max = input$tsdatrange[2]
@@ -262,7 +262,7 @@ output$Time_Data <- renderDT(timeseriesdat$x,
 # Sites to choose from
 output$monthsite <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  monthsites <- isolate(workbook$Monthly_Data)
+  monthsites <- workbook$Monthly_Data
   monthsites = unique(monthsites$ML_Name)
   selectInput("monthsite",
               label = "Site Name",
@@ -272,7 +272,7 @@ output$monthsite <- renderUI({
 # Dates to choose from
 output$mondatrange <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  monthdata <- isolate(workbook$Daily_Geomean_Data)
+  monthdata <- workbook$Daily_Geomean_Data
   sliderInput("mondatrange",
               label="Date Range",
               min=min(monthdata$Date),
@@ -288,7 +288,7 @@ output$mondatrange <- renderUI({
 # Craft drop down menu for concentration and loading
 output$unit_type <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  monthdata <- isolate(workbook$Monthly_Data)
+  monthdata <- workbook$Monthly_Data
   monthdata = monthdata[monthdata$ML_Name==input$monthsite&!is.na(monthdata$Observed_Loading),"Observed_Loading"]
   if(length(monthdata)>0){
     subd=c("Concentration","Loading")
@@ -302,7 +302,7 @@ selectedmonthdata <- reactiveValues()
 observe({
   req(input$monthsite)
   req(input$mondatrange)
-  dailygeomeans <- isolate(workbook$Daily_Geomean_Data)
+  dailygeomeans <- workbook$Daily_Geomean_Data
   seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>input$mondatrange[1]&dailygeomeans$Date<input$mondatrange[2],]
   seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
   selectedmonthdata$seldg = seldailygeomeans
@@ -316,7 +316,7 @@ output$Monthly_Geomeans <- renderPlot({
   req(selectedmonthdata$aggseldg)
   barcolors = piratepal(palette="up")
   if(input$unit_type=="Concentration"){
-    x = isolate(selectedmonthdata$aggseldg)
+    x = selectedmonthdata$aggseldg
     print(x)
     # Straight bar plot - concentrations
     uplim = max(x$E.coli_Geomean)*1.2
@@ -333,7 +333,7 @@ output$Monthly_Geomeans <- renderPlot({
     }
     if(input$medplot){
       # Obtain boxplot stats from loading data
-      y = isolate(selectedmonthdata$seldg)
+      y = selectedmonthdata$seldg
       y = droplevels(y[order(y$month),])
       
       # Get axes right to accommodate boxplot overlay (if checkbox checked)
@@ -355,7 +355,7 @@ output$Monthly_Geomeans <- renderPlot({
   if(input$unit_type=="Loading"){
     cols = piratepal(palette="up")
     # Narrow dataset
-    monthdatl <- isolate(workbook$LDC_Data)
+    monthdatl <- workbook$LDC_Data
     datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>input$mondatrange[1]&monthdatl$Date<input$mondatrange[2],c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
     if(dim(datrange)[1]>0){
       datrange <- datrange[!is.na(datrange$Observed_Loading),]
