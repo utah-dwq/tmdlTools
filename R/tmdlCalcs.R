@@ -126,7 +126,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     }
     
     # Apply percentile calc to data
-    ldc.dat <- ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
+    ldc.dat <- plyr::ddply(.data=ecoli.flow.dat, .(MLID, ML_Name), .fun=ldc_func)
     
     # Add to list
     calcs$LDC_Data <- ldc.dat
