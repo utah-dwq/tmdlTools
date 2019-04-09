@@ -5,6 +5,6 @@ account: udwq
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 815547
-bundleId: 1966439
+bundleId: 1996173
 url: https://udwq.shinyapps.io/ecoliDataExplorer/
-when: 1553624879.9097
+when: 1554762667.62207

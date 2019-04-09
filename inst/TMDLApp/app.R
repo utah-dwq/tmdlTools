@@ -8,6 +8,8 @@ require(colorspace)
 require(reshape2)
 require(markdown)
 
+source("tmdlCalcs.R")
+
 perc.red <- function(x,y){100-x/y*100}
 
 # Define UI for application that draws a histogram
@@ -16,8 +18,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                 tabsetPanel(id="all_the_things",
                             tabPanel("Upload Data",
                                      useShinyjs(),
-                                     h3("Select your Excel workbook containing E.coli data"),
-                                     tags$strong("NOTE:"),p("Workbooks must fit the E.coli tmdlTools template, but you will have the option in this app to run the tmdlCalcs (e.g. calculate loadings, seasonal geomeans) function on the uploaded dataset."),
+                                     h3("Select your Excel workbook containing ", em("E.coli "), "data"),
+                                     p(strong("NOTE: "),"Workbooks must fit the ", em("E.coli"), "tmdlTools template, but you have the option in this app to run the tmdlCalcs function (e.g. calculate loadings, seasonal geomeans) on the uploaded dataset."),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
                                                   uiOutput("tmdltool"),
                                                   uiOutput("selectsheet"),
@@ -196,6 +198,7 @@ output$dwnloadbutton <- renderUI({
       insertTab(inputId="all_the_things",
                 tabPanel("Load Duration Curves",
                          h3("Bacterial Loadings Across Flow Regimes"),
+                         p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
                          sidebarPanel(selectInput("ldcsite",
                                                   label = "Site Name",
                                                   choices=c(unique(workbook$LDC_Data$ML_Name))),
