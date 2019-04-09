@@ -116,7 +116,7 @@ output$dwnloadbutton <- renderUI({
  observe({
    req(input$tmdltool)
    if(input$tmdltool=="Yes"){
-     out <- tmdlTools::tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
+     out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
    }else{
        dat = openxlsx::loadWorkbook(workbook$wb_path)
        sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
