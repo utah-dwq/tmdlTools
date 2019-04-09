@@ -7,6 +7,8 @@ require(yarrr)
 require(colorspace)
 require(reshape2)
 require(markdown)
+require(dplyr)
+require(plyr)
 
 source("tmdlCalcs.R")
 
