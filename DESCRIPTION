@@ -4,7 +4,7 @@ Version: 0.0.0.9000
 Authors@R: person("Elise", "Hinman", email = "ehinman@utah.gov", role = c("aut", "cre"))
 Description: tmdlTools was created for the upcoming E.coli TMDLs in the State of Utah. It takes concentration and flow data on a site/date level and calculates parameter loading by day, month, and rec season. From these data, it produces a number of plots and includes a Shiny app for data visualization.
 Depends: R (>= 3.5.1)
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
