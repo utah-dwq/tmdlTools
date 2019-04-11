@@ -24,17 +24,15 @@ On tabs displaying bar plots, the user may select whether they would like the pl
 
 ### Time Series
 
-Within the time series plot, users can compare E.coli concentrations at different sites through time. Toggling from a "Point" plot type to a "Line" plot type connects the individual measurements for each site to provide a more cohesive picture of concentration changes over time. However, line plots can become busy if many sites are included on the graph.
+Within the time series plot, users can compare *E.coli* concentrations at different sites through time. Toggling from a "Point" plot type to a "Line" plot type connects the individual measurements for each site to provide a more cohesive picture of concentration changes over time. However, line plots can become busy if many sites are included on the graph.
 
-Use the date range widget to focus on particular years or seasons. Clicking on the start or end date will bring up a calendar, including arrows to navigate forward and backward in time. Repeatedly clicking the title at the top of the date range menu will push out to months, years, decades, and so on. Click "Reset Date Range" to plot the sites against the maximum and minimum dates for which data are available in the dataset. Changing the date range also changes the number of points exceeding the maximum criterion, which is reflected in the plot legend.
-
-Editing the Max and Geomean criteria moves the red and orange horizontal lines on the plot. Edits to the max criterion change the calculations for the percentage of datapoints exceeding the maximum criterion.
+Use the date range slider widget to focus on particular years or seasons. Changing the date range also changes the number of points exceeding the maximum criterion, which is reflected in the plot legend.
 
 Note that the colors are not specific to each site, but rather reflect the order in which the checked sites appear in the checkbox menu. Clicking sites on and off will change the colors of the points visible on the plot. The legend reflects these changes.
 
 ### Monthly
 
-Monthly barplots display the geometric mean *E.coli* concentrations/loadings calculated using the date range specified (defaults to all available data). The colors of the bars are a gradient added for contrast and are not specific to each month. Note that the horizontal line plotted in all graphs is the geometric mean standard, and the percentage reported above certain bars represents the percent reduction needed to meet the geometric mean standard. Also be aware that quartiles may reveal points that fall above the geomean standard but are not consistent enough to push the geometric mean of the data above the standard. Selecting date ranges containing no measurements will trigger an error message.
+Monthly barplots display the geometric mean *E.coli* concentrations/loadings calculated using the date range specified (defaults to all available data). Note that the horizontal line plotted in all graphs is the geometric mean standard, and the percentage reported above certain bars represents the percent reduction needed to meet the geometric mean standard. Also be aware that quartiles may reveal points that fall above the geomean standard but are not consistent enough to push the geometric mean of the data above the standard. Selecting date ranges containing no measurements will trigger an error message.
 
 ### Rec/Non-Rec Season
 
