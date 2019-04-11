@@ -163,7 +163,7 @@ output$dwnloadbutton <- renderUI({
    
    for(i in 1:length(wbdownload)){
      addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
-     writeData(wb, sheet = names(wbdownload)[i], wbdownload[i], rowNames = FALSE)
+     writeData(wb, sheet = names(wbdownload)[i], wbdownload[[i]], rowNames = FALSE, colNames = TRUE)
    }
    wbdwn$outputworkbook = wb
  })
