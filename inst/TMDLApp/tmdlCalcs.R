@@ -113,10 +113,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     
     ## Create loading dataset
     ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
-    ecoli.flow.dat$Loading_Capacity <- ecoli.flow.dat$Flow*geom_crit*cf
-    ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
+    ecoli.flow.dat$TMDL <- (ecoli.flow.dat$Flow*geom_crit*cf)*(1-mos)
+    #ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
     ecoli.flow.dat$Observed_Loading <- ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf
-    ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$Loading_Capacity_MOS,"yes","no")
+    ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$TMDL,"yes","no")
     
     # Flow Percentile calc function
     ldc_func <- function(x){
@@ -137,23 +137,23 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ## Loading by month ##
     ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
     ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
-    lc_mo <- aggregate(Loading_Capacity_MOS~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
-    mo_load <- merge(ol_mo,lc_mo, all=TRUE)
+    tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
+    mo_load <- merge(ol_mo,tmdl_mo, all=TRUE)
     mo_load <- mo_load[order(mo_load$month),]
-    mo_load$Percent_Reduction_L <- ifelse(mo_load$Observed_Loading>mo_load$Loading_Capacity_MOS,round(perc.red(mo_load$Loading_Capacity_MOS,mo_load$Observed_Loading), digits=0),0)
+    mo_load$Percent_Reduction_L <- ifelse(mo_load$Observed_Loading>mo_load$TMDL,round(perc.red(mo_load$TMDL,mo_load$Observed_Loading), digits=0),0)
     
     ## Loading by rec season ##
     ecoli.ldc$Year = year(ecoli.ldc$Date)
     ol_rec <- aggregate(Observed_Loading~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
-    lcmos_rec <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
-    rec_load <- merge(ol_rec,lcmos_rec, all=TRUE)
-    rec_load$Percent_Reduction_L <- ifelse(rec_load$Observed_Loading>rec_load$Loading_Capacity_MOS,round(perc.red(rec_load$Loading_Capacity_MOS,rec_load$Observed_Loading), digits=0),0)
+    tmdl_rec <- aggregate(TMDL~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
+    rec_load <- merge(ol_rec,tmdl_rec, all=TRUE)
+    rec_load$Percent_Reduction_L <- ifelse(rec_load$Observed_Loading>rec_load$TMDL,round(perc.red(rec_load$TMDL,rec_load$Observed_Loading), digits=0),0)
     
     ## Loading by irrigation season ##
     ol_irg <- aggregate(Observed_Loading~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
-    lcmos_irg <- aggregate(Loading_Capacity_MOS~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
-    irg_load <- merge(ol_irg,lcmos_irg, all=TRUE)
-    irg_load$Percent_Reduction_L <- ifelse(irg_load$Observed_Loading>irg_load$Loading_Capacity_MOS,round(perc.red(irg_load$Loading_Capacity_MOS,irg_load$Observed_Loading), digits=0),0)
+    tmdl_irg <- aggregate(TMDL~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+    irg_load <- merge(ol_irg,tmdl_irg, all=TRUE)
+    irg_load$Percent_Reduction_L <- ifelse(irg_load$Observed_Loading>irg_load$TMDL,round(perc.red(irg_load$TMDL,irg_load$Observed_Loading), digits=0),0)
     
   }else{mo_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))
         rec_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))
