@@ -21,9 +21,9 @@ ui <- fluidPage(title="E.coli Data Explorer",
                             tabPanel("Upload Data",
                                      useShinyjs(),
                                      h3("Select your Excel workbook containing ", em("E.coli "), "data"),
-                                     p(strong("NOTE: "),"Workbooks must fit the ", em("E.coli"), "tmdlTools template, but you have the option in this app to run the tmdlCalcs function (e.g. calculate loadings, seasonal geomeans) on the uploaded dataset."),
+                                     p(strong("NOTE: "),"Workbooks must fit the ", em("E.coli"), " template, but you have the option in this app to calculate loadings and seasonal geomeans on the uploaded dataset."),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
-                                                  uiOutput("tmdltool"),
+                                                  uiOutput("loadcalcs"),
                                                   uiOutput("selectsheet"),
                                                   uiOutput("dwnloadbutton")),
                                      mainPanel(
@@ -89,13 +89,13 @@ server <- function(input, output) {
     workbook$wb_path = fileup$datapath})
  
 # Run tmdl tools widget, which disables once clicked   
- output$tmdltool <- renderUI({
+ output$loadcalcs <- renderUI({
     req(input$workbook)
-    radioButtons("tmdltool", label = "Run tmdlTools?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
+    radioButtons("loadcalcs", label = "Perform Loading Calculations?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
   })
 
- observeEvent(input$tmdltool,{
-   disable("tmdltool")
+ observeEvent(input$loadcalcs,{
+   disable("loadcalcs")
  })
  
 # Create drop down menu of sheets contained in xlsx file
@@ -111,13 +111,13 @@ server <- function(input, output) {
 # Download button that shows after sheet widget
 output$dwnloadbutton <- renderUI({
   req(input$selectsheet)
-  downloadButton("export_tmdltools","Export tmdlTools output")
+  downloadButton("export_loadcalcs","Export workbook")
 })
  
 ### Reading in the data from the file to the reactive environment ### 
  observe({
-   req(input$tmdltool)
-   if(input$tmdltool=="Yes"){
+   req(input$loadcalcs)
+   if(input$loadcalcs=="Yes"){
      out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
    }else{
        dat = openxlsx::loadWorkbook(workbook$wb_path)
@@ -168,8 +168,8 @@ output$dwnloadbutton <- renderUI({
    wbdwn$outputworkbook = wb
  })
  
- # Download results of tmdlTools
- output$export_tmdltools <- downloadHandler(
+ # Download results of loadcalcs
+ output$export_loadcalcs <- downloadHandler(
    filename = paste0(unlist(strsplit(input$workbook$name,".xlsx")),"_",Sys.Date(),".xlsx"),
    content = function(file) {
      openxlsx::saveWorkbook(wbdwn$outputworkbook, file)
@@ -403,19 +403,19 @@ output$Monthly_Geomeans <- renderPlot({
     cols = piratepal(palette="up")
     # Narrow dataset
     monthdatl <- workbook$LDC_Data
-    datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>input$mondatrange[1]&monthdatl$Date<input$mondatrange[2],c("MLID","ML_Name","Date","Loading_Capacity_MOS","Observed_Loading")]
+    datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>input$mondatrange[1]&monthdatl$Date<input$mondatrange[2],c("MLID","ML_Name","Date","TMDL","Observed_Loading")]
     if(dim(datrange)[1]>0){
       datrange <- datrange[!is.na(datrange$Observed_Loading),]
-      datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+      datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("TMDL","Observed_Loading"), variable.name = "Meas_Type")
       datstack$month = lubridate::month(datstack$Date, label=TRUE)
       datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
       names(datstack)[names(datstack)=="value"]<-"Loading"
       x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
       x = dcast(data=x, month~Meas_Type, value.var="Loading")
       x = x[order(x$month),]
-      x$Percent_Reduction = ifelse(x$Observed_Loading>x$Loading_Capacity_MOS,round(perc.red(x$Loading_Capacity_MOS,x$Observed_Loading), digits=0),0)
-      uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
-      mo_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS")]
+      x$Percent_Reduction = ifelse(x$Observed_Loading>x$TMDL,round(perc.red(x$TMDL,x$Observed_Loading), digits=0),0)
+      uplim = max(c(x$Observed_Loading,x$TMDL))*1.2
+      mo_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL")]
       
       # Straight bar plots
       barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
@@ -570,12 +570,12 @@ output$Rec_Geomeans <- renderPlot({
     if(dim(x)[1]>0){
       # Determine if rec/non rec represented
       uni = unique(x$Rec_Season)
-      uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
+      uplim = max(c(x$Observed_Loading,x$TMDL))*1.2
       if(length(uni)>1){ # if both represented...
         par(mfrow=c(1,2)) # create two plot panes...
         # Separate into rec and non rec
         # Rec data
-        rec_load.p <- x[x$Rec_Season=="Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        rec_load.p <- x[x$Rec_Season=="Rec Season",names(x)%in%c("Observed_Loading","TMDL","Year")]
         rownames(rec_load.p)= rec_load.p$Year
         rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
         # Rec barplot
@@ -591,7 +591,7 @@ output$Rec_Geomeans <- renderPlot({
         }
         
         # Non-Rec data, same process
-        nrec_load.p <- x[x$Rec_Season=="Not Rec Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        nrec_load.p <- x[x$Rec_Season=="Not Rec Season",names(x)%in%c("Observed_Loading","TMDL","Year")]
         rownames(nrec_load.p)= nrec_load.p$Year
         nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]
         barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), main="Not Rec Season",col=c(colucols[2],loadcol))
@@ -606,7 +606,7 @@ output$Rec_Geomeans <- renderPlot({
         }}else{ # If only one category represented...
           par(mfrow=c(1,1)) # only make one plot
           colucol = ifelse(uni=="Rec Season",colucols[1],colucols[2]) # redefine bar color
-          rec_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+          rec_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL","Year")]
           rownames(rec_load.p)= rec_load.p$Year
           rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
           # Bar plot singular - same as rec
@@ -625,9 +625,9 @@ output$Rec_Geomeans <- renderPlot({
       if(input$rec_medplot){
         # Obtain boxplot stats from loading data
         loaddata = workbook$LDC_Data
-        y <- loaddata[loaddata$ML_Name==input$recsite,c("MLID","ML_Name","Date","Rec_Season","Loading_Capacity_MOS","Observed_Loading")]
+        y <- loaddata[loaddata$ML_Name==input$recsite,c("MLID","ML_Name","Date","Rec_Season","TMDL","Observed_Loading")]
         y <- y[!is.na(y$Observed_Loading),]
-        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Rec_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Rec_Season"), value.vars=c("TMDL","Observed_Loading"), variable.name = "Meas_Type")
         names(datstack)[names(datstack)=="value"]<-"Loading"
         datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
         
@@ -796,12 +796,12 @@ output$Irg_Geomeans <- renderPlot({
     if(dim(x)[1]>0){
       # Determine if irg/non irg represented
       uni = unique(x$Irg_Season)
-      uplim = max(c(x$Observed_Loading,x$Loading_Capacity_MOS))*1.2
+      uplim = max(c(x$Observed_Loading,x$TMDL))*1.2
       if(length(uni)>1){ # if both represented...
         par(mfrow=c(1,2)) # create two plot panes...
         # Separate into irg and non irg
         # Irrigation data
-        irg_load.p <- x[x$Irg_Season=="Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        irg_load.p <- x[x$Irg_Season=="Irrigation Season",names(x)%in%c("Observed_Loading","TMDL","Year")]
         rownames(irg_load.p)= irg_load.p$Year
         irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
         # Irg barplot
@@ -817,7 +817,7 @@ output$Irg_Geomeans <- renderPlot({
         }
         
         # Non-Irrigation data, same process
-        nirg_load.p <- x[x$Irg_Season=="Not Irrigation Season",names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+        nirg_load.p <- x[x$Irg_Season=="Not Irrigation Season",names(x)%in%c("Observed_Loading","TMDL","Year")]
         rownames(nirg_load.p)= nirg_load.p$Year
         nirg_load.p = nirg_load.p[,!names(nirg_load.p)%in%("Year")]
         barp <- barplot(t(nirg_load.p), beside=T, names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], ylim=c(0, uplim), main="Not Irrigation Season",col=c(colucols[2],loadcol))
@@ -832,7 +832,7 @@ output$Irg_Geomeans <- renderPlot({
         }}else{ # If only one category represented...
           par(mfrow=c(1,1)) # only make one plot
           colucol = ifelse(uni=="Irrigation Season",colucols[1],colucols[2]) # redefine bar color
-          irg_load.p <- x[,names(x)%in%c("Observed_Loading","Loading_Capacity_MOS","Year")]
+          irg_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL","Year")]
           rownames(irg_load.p)= irg_load.p$Year
           irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
           # Bar plot singular - same as irg
@@ -851,9 +851,9 @@ output$Irg_Geomeans <- renderPlot({
       if(input$irg_medplot){
         # Obtain boxplot stats from loading data
         loaddata = workbook$LDC_Data
-        y <- loaddata[loaddata$ML_Name==input$irgsite,c("MLID","ML_Name","Date","Irg_Season","Loading_Capacity_MOS","Observed_Loading")]
+        y <- loaddata[loaddata$ML_Name==input$irgsite,c("MLID","ML_Name","Date","Irg_Season","TMDL","Observed_Loading")]
         y <- y[!is.na(y$Observed_Loading),]
-        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Irg_Season"), value.vars=c("Loading_Capacity_MOS","Observed_Loading"), variable.name = "Meas_Type")
+        datstack <- reshape2::melt(data = y, id.vars = c("MLID", "ML_Name", "Date","Irg_Season"), value.vars=c("TMDL","Observed_Loading"), variable.name = "Meas_Type")
         names(datstack)[names(datstack)=="value"]<-"Loading"
         datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
         
@@ -931,7 +931,7 @@ output$LDC <- renderPlot({
   text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Dry \n Conditions")
   text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Low \n Flows")
   lines(flow.plot$Loading_Capacity~flow.plot$Flow_Percentile, type="l", col="firebrick3", lwd=2)
-  lines(flow.plot$Loading_Capacity_MOS~flow.plot$Flow_Percentile, col="red", lwd=2)
+  lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="red", lwd=2)
   
   if(input$pt_type=="Calendar Seasons"){
     colpal <- colorspace::sequential_hcl(4)
