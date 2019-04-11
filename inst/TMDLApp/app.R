@@ -419,7 +419,7 @@ output$Monthly_Geomeans <- renderPlot({
       
       # Straight bar plots
       barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
-      legend("topright",legend=c("Observed Loading","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
+      legend("topright",legend=c("Observed Loading","TMDL", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
       box(bty="l")
       barps <- barp[1,]
       barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
@@ -436,7 +436,7 @@ output$Monthly_Geomeans <- renderPlot({
         
         # Bar plot
         barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
-        legend("topright",legend=c("Observed Loading","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
+        legend("topright",legend=c("Observed Loading","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
         box(bty="l")
         
         # x-axis arguments for boxplot based on barplot placement
@@ -561,7 +561,7 @@ output$Rec_Geomeans <- renderPlot({
   }
   ### LOADING PLOTS ###
   if(input$rec_unit_type=="Loading"){
-    # Define loading capacity color
+    # Define TMDL color
     loadcol = colorspace::rainbow_hcl(3)[3]
     # Filter to data needed to produce plots
     x <- recdata[recdata$ML_Name==input$recsite,]
@@ -595,7 +595,7 @@ output$Rec_Geomeans <- renderPlot({
         rownames(nrec_load.p)= nrec_load.p$Year
         nrec_load.p = nrec_load.p[,!names(nrec_load.p)%in%("Year")]
         barp <- barplot(t(nrec_load.p), beside=T, names.arg=x$Year[x$Rec_Season=="Not Rec Season"], ylim=c(0, uplim), main="Not Rec Season",col=c(colucols[2],loadcol))
-        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+        legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Not Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Not Rec Season"]))
@@ -611,7 +611,7 @@ output$Rec_Geomeans <- renderPlot({
           rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
           # Bar plot singular - same as rec
           barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
-          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
           box(bty="l")
           barps <- barp[1,]
           barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
@@ -649,7 +649,7 @@ output$Rec_Geomeans <- renderPlot({
           
           
           barp <- barplot(t(nrec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Not Rec Season"], main="Not Rec Season",col=c(colucols[2],loadcol))
-          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
+          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
           box(bty="l")
           
           # x-axis arguments for boxplot based on barplot placement
@@ -787,7 +787,7 @@ output$Irg_Geomeans <- renderPlot({
   }
   ### LOADING PLOTS ###
   if(input$irg_unit_type=="Loading"){
-    # Define loading capacity color
+    # Define TMDL color
     loadcol = colorspace::rainbow_hcl(3)[3]
     # Filter to data needed to produce plots
     x <- irgdata[irgdata$ML_Name==input$irgsite,]
@@ -821,7 +821,7 @@ output$Irg_Geomeans <- renderPlot({
         rownames(nirg_load.p)= nirg_load.p$Year
         nirg_load.p = nirg_load.p[,!names(nirg_load.p)%in%("Year")]
         barp <- barplot(t(nirg_load.p), beside=T, names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], ylim=c(0, uplim), main="Not Irrigation Season",col=c(colucols[2],loadcol))
-        legend("topright",legend=c("Observed Loading - Irrigation","Observed Loading - Not Irrigation","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+        legend("topright",legend=c("Observed Loading - Irrigation","Observed Loading - Not Irrigation","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Not Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Not Irrigation Season"]))
@@ -837,7 +837,7 @@ output$Irg_Geomeans <- renderPlot({
           irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
           # Bar plot singular - same as irg
           barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
-          legend("topright",legend=c("Observed Loading - Irrigation","Observed Loading - Not Irrigation","Loading Capacity", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
+          legend("topright",legend=c("Observed Loading - Irrigation","Observed Loading - Not Irrigation","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
           box(bty="l")
           barps <- barp[1,]
           barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction_L))
@@ -875,7 +875,7 @@ output$Irg_Geomeans <- renderPlot({
           
           
           barp <- barplot(t(nirg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Not Irrigation Season"], main="Not Irrigation Season",col=c(colucols[2],loadcol))
-          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","Loading Capacity", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
+          legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(colucols[1],colucols[2],loadcol,NA,"white"),border=c("black","black","black","white","white"),lty=c(NA,NA,NA,1,NA),lwd=c(NA,NA,NA,3,NA),cex=1)
           box(bty="l")
           
           # x-axis arguments for boxplot based on barplot placement
@@ -930,8 +930,7 @@ output$LDC <- renderPlot({
   text(50, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Mid-Range \n Flows")
   text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Dry \n Conditions")
   text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Low \n Flows")
-  lines(flow.plot$Loading_Capacity~flow.plot$Flow_Percentile, type="l", col="firebrick3", lwd=2)
-  lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="red", lwd=2)
+  lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="firebrick3", lwd=2)
   
   if(input$pt_type=="Calendar Seasons"){
     colpal <- colorspace::sequential_hcl(4)
@@ -945,7 +944,7 @@ output$LDC <- renderPlot({
     points(spre$Observed_Loading~spre$Flow_Percentile, pch=21, col="black", bg=colpal[3], cex=2)
     points(sume$Observed_Loading~sume$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
     points(fale$Observed_Loading~fale$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
-    legend("topright",legend=c("Loading Capacity","Loading Capacity + MOS", "E.coli Loading - Winter", "E.coli Loading - Spring", "E.coli Loading - Summer","E.coli Loading - Fall"), bty="n", col=c("firebrick3","red","black","black","black","black"), lty=c(1,1,NA,NA,NA,NA),lwd=c(2,2,NA,NA,NA,NA),pch=c(NA,NA,21,21,21,21), pt.bg=c(NA,NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,NA,2,2,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "E.coli Loading - Winter", "E.coli Loading - Spring", "E.coli Loading - Summer","E.coli Loading - Fall"), bty="n", col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1)
   }
   
   if(input$pt_type=="Recreation Seasons"){
@@ -955,7 +954,7 @@ output$LDC <- renderPlot({
     
     points(rec$Observed_Loading~rec$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonrec$Observed_Loading~nonrec$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("Loading Capacity","Loading Capacity + MOS", "E.coli Loading - Rec", "E.coli Loading - Non-Rec"), bty="n", col=c("firebrick3","red","black","black"), lty=c(1,1,NA,NA),lwd=c(2,2,NA,NA),pch=c(NA,NA,21,21), pt.bg=c(NA,NA,colpal), pt.cex=c(NA,NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL","E.coli Loading - Rec", "E.coli Loading - Non-Rec"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
     
   }
   
@@ -966,7 +965,7 @@ output$LDC <- renderPlot({
     
     points(irg$Observed_Loading~irg$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonirg$Observed_Loading~nonirg$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("Loading Capacity","Loading Capacity + MOS", "E.coli Loading - Irrigation", "E.coli Loading - No Irrigation"), bty="n", col=c("firebrick3","red","black","black"), lty=c(1,1,NA,NA),lwd=c(2,2,NA,NA),pch=c(NA,NA,21,21), pt.bg=c(NA,NA,colpal), pt.cex=c(NA,NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "E.coli Loading - Irrigation", "E.coli Loading - No Irrigation"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
     
   }
 })
