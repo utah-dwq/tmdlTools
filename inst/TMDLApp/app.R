@@ -257,14 +257,16 @@ observe({
   req(input$checkbox)
   x = workbook$Daily_Geomean_Data
   x = x[x$ML_Name %in% input$checkbox,]
-  timeseriesdat$min = input$tsdatrange[1]
-  timeseriesdat$max = input$tsdatrange[2]
+  if(!is.null(input$tsdatrange)){
+    timeseriesdat$min = input$tsdatrange[1]
+    timeseriesdat$max = input$tsdatrange[2] 
+  }
   timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
 })
 
 output$Time_Series <- renderPlot({
   req(input$checkbox)
-  req(input$tsdatrange[1],input$tsdatrange[2])
+  req(timeseriesdat$min,timeseriesdat$max)
 
   # Plot inputs from reactive values
   x = timeseriesdat$x

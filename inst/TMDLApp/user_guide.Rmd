@@ -5,7 +5,7 @@ runtime: shiny
 
 ## Welcome!
 
-Thank you for your interest in using the *E.coli* data visualization tool. Deployed as a Shiny application, this tool is intended to assist Environmental Coordinators and Managers with total maximum daily load (TMDL) development under the [EPA's Clean Water Act](https://www.epa.gov/laws-regulations/summary-clean-water-act). Users may study time series plots, compare between sites, and ascertain which sites exceed water quality standards at what time(s) of year. Peruse this guide for more information on the plots displayed and their functionality within the app. Originally produced for the Utah Department of Environmental Quality's [Division of Water Quality](https://deq.utah.gov/division-water-quality).
+Thank you for your interest in using the *E.coli* data visualization tool. Deployed as a Shiny application, this tool is intended to assist Environmental Coordinators and Managers with total maximum daily load (TMDL) development under the EPA's [Clean Water Act](https://www.epa.gov/laws-regulations/summary-clean-water-act). Users may study time series plots, compare between sites, and ascertain which sites exceed water quality standards at what time(s) of year. Peruse this guide for more information on the plots displayed and their functionality within the app. Originally produced for the Utah Department of Environmental Quality's [Division of Water Quality](https://deq.utah.gov/division-water-quality).
 
 ### General Tips
 
@@ -20,6 +20,10 @@ On the Monthy, Rec/Non-Rec Season, and Irrigation/Non-Irrigation Season tabs, pa
 
 **Select Measurement Type**
 On tabs displaying bar plots, the user may select whether they would like the plots to show concentration or loading data. Sites lacking flow (and thus loading) data will not have this functionality, and "Loading" will not be listed as an option in the drop down menu.
+
+### Upload Data
+
+First, the user must upload their data file for use in the visualization tools. The app is expecting an Excel workbook with three tabs: Inputs, Ecoli_data, and Flow_data. It will also accommodate other tabs within the workbook. The app will then ask if the user wants to run the *tmdlCalcs* function, which calculates daily geometric means and loadings from the concentration and flow data. After reacting to the tmdlCalcs question, this tab produces data tables for the user to review and verify before moving forward to the visualization steps. The tool also allows the user to download the dataset.
  
 
 ### Time Series
