@@ -1,0 +1,53 @@
+---
+title: "tmdlTools Installation Guide"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Installing R and RStudio
+
+#### R
+
+R is an open-source programming language originally developed for statistical analysis. It has gained popularity and functionality throughout the decades and is now a common workhorse for environmental data scientists. Download R from the Comprehensive R Archive Network (CRAN) repository by visiting this link: https://cloud.r-project.org
+
+Click on the link for your computer's operating system (PC, Mac, or Linux), and you will be taken to a page with a few download options (titled "Subdirectories"). For the purposes of this package, click the link next to the "base" version that says "install R for the first time." The next page provides the download link, which downloads the executable file to your computer. Double clicking the install file opens an installer window. When using the install wizard, comply with all default settings. Click "Finish" to finish installing R on your computer.
+
+#### RStudio
+
+RStudio is a user-friendly program for running R and its many packages. While not required to run the tmdlTools package, RStudio is highly recommended for beginneRs hoping to learn more about R's functionality and syntax. RStudio runs R behind the scenes and gives programmers an organized, clean interface in which to develop and run code.
+
+Head to https://www.rstudio.com/products/rstudio/download/ and select the free RStudio Desktop version for your operating system. Follow the download prompts and stick to default settings. 
+
+## Downloading the tmdlTools package
+
+R code is used to run programs that perform helpful tasks on the computer, from performing t-tests on data to saving files downloaded from the internet. So where do packages fit into these tasks? From [Quick-R](https://www.statmethods.net/interface/packages.html), "Packages are collections of R functions, data, and compiled code in a well-defined format. The directory where packages are stored is called the library. R comes with a standard set of packages. Others are available for download and installation. Once installed, they have to be loaded into the session to be used."
+
+We need to download tmdlTools from its source on the [Division of Water Quality's GitHub](https://github.com/utah-dwq). GitHub is an online platform for storing, developing, and sharing a wide variety of computer languages. DWQ's github page contains a number of repositories of R code used to perform water quality assessments and explore water quality data. Feel free to peruse DWQ's repositories on the web, however, we will use the R console to download packages from the internet for use on a computer.
+
+To download packages from GitHub, we need to install the *devtools* package from CRAN in R. To do this, type this code into the console and hit enter:
+
+```{r, eval=FALSE}
+install.packages("devtools")
+```
+
+Now that we've installed the *devtools* package from CRAN, we need to load it into our R session. Loading it using the library() command will make all of the functions within the package available for use in R or RStudio.
+
+
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
