@@ -67,7 +67,8 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     
   ### Convert any "<" to min and max detection limits
   ecoli.dat$E.coli=gsub("<1",1,ecoli.dat$E.coli)
-  ecoli.dat$E.coli=as.numeric(gsub(">2419.6",2420,ecoli.dat$E.coli))
+  ecoli.dat$E.coli=gsub(">2419.6",2420,ecoli.dat$E.coli)
+  ecoli.dat$E.coli = as.numeric(ecoli.dat$E.coli)
   ecoli.dat = ecoli.dat[!is.na(ecoli.dat$E.coli),]
   
   # Trim white space
@@ -113,9 +114,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     
     ## Create loading dataset
     ecoli.flow.dat <- merge(flow.dat,ecoli.day.gmean, all.x=TRUE)
-    ecoli.flow.dat$TMDL <- (ecoli.flow.dat$Flow*geom_crit*cf)*(1-mos)
+    ecoli.flow.dat$TMDL <- ((ecoli.flow.dat$Flow*geom_crit*cf)*(1-mos))/1000000000
+    ecoli.flow.dat$Units = "GigaMPN/day"
     #ecoli.flow.dat$Loading_Capacity_MOS <- ecoli.flow.dat$Loading_Capacity*(1-mos)
-    ecoli.flow.dat$Observed_Loading <- ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf
+    ecoli.flow.dat$Observed_Loading <- (ecoli.flow.dat$Flow*ecoli.flow.dat$E.coli_Geomean*cf)/1000000000
     ecoli.flow.dat$Exceeds <- ifelse(ecoli.flow.dat$Observed_Loading>ecoli.flow.dat$TMDL,"yes","no")
     
     # Flow Percentile calc function

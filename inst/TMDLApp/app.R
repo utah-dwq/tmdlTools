@@ -73,6 +73,16 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   checkboxInput("irg_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Irg_Geomeans", height="700px"),
                                                DT::dataTableOutput("Irg_Data", height=500))),
+                            tabPanel("Load Duration Curves",
+                                     h3("Bacterial Loadings Across Flow Regimes"),
+                                     p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
+                                     sidebarPanel(uiOutput("ldcsite"),
+                                                  selectInput("pt_type",
+                                                              label = "Data Category",
+                                                              choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")), width = 3),
+                                     mainPanel(plotOutput("LDC", width="100%", height="700px"),
+                                               hr(),
+                                               div(DT::dataTableOutput("LDC_Data", height=20),style="font-size:75%"))),
                             tabPanel("User Guide",
                                      includeMarkdown("user_guide.Rmd"))
               )
@@ -91,7 +101,7 @@ server <- function(input, output) {
 # Run tmdl tools widget, which disables once clicked
  output$loadcalcs <- renderUI({
     req(input$workbook)
-    radioButtons("loadcalcs", label = "Perform Loading Calculations?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
+    radioButtons("loadcalcs", label = "Perform Geomean/Loading Calculations?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
   })
 
  observeEvent(input$loadcalcs,{
@@ -197,22 +207,20 @@ output$dwnloadbutton <- renderUI({
 
   observe({
     if(!is.null(workbook$LDC_Data)){
-      insertTab(inputId="all_the_things",
-                tabPanel("Load Duration Curves",
-                         h3("Bacterial Loadings Across Flow Regimes"),
-                         p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
-                         sidebarPanel(selectInput("ldcsite",
-                                                  label = "Site Name",
-                                                  choices=c(unique(workbook$LDC_Data$ML_Name))),
-                                      selectInput("pt_type",
-                                                  label = "Data Category",
-                                                  choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")), width = 3),
-                         mainPanel(plotOutput("LDC", width="100%", height="700px"),
-                                   hr(),
-                                   div(DT::dataTableOutput("LDC_Data", height=20),style="font-size:75%"))),
-                target="User Guide")
+      showTab(inputId="all_the_things", target = "Load Duration Curves")
+    }else{
+      hideTab(inputId="all_the_things", target = "Load Duration Curves")
     }
   })
+  
+# Add unique site names to LDC drop down list (if flow data are available)
+output$ldcsite <- renderUI({
+  req(workbook$LDC_Data)
+  selectInput("ldcsite",
+              label = "Site Name",
+              choices=c(unique(workbook$LDC_Data$ML_Name)))
+})
+
 
 ## Save Criteria in own reactive values for use in all plots ##
 crits <- reactiveValues()
@@ -420,7 +428,7 @@ output$Monthly_Geomeans <- renderPlot({
       mo_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL")]
 
       # Straight bar plots
-      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
       legend("topright",legend=c("Observed Loading","TMDL", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
       box(bty="l")
       barps <- barp[1,]
@@ -437,7 +445,7 @@ output$Monthly_Geomeans <- renderPlot({
         uplim1 = max(uplim, uplim1)
 
         # Bar plot
-        barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (MPN/day)",col=c(cols[1],cols[2]))
+        barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
         legend("topright",legend=c("Observed Loading","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
         box(bty="l")
 
@@ -581,7 +589,7 @@ output$Rec_Geomeans <- renderPlot({
         rownames(rec_load.p)= rec_load.p$Year
         rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
         # Rec barplot
-        barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+        barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main="Rec Season",ylab="E.coli Loading (GigaMPN/day)",col=c(colucols[1],loadcol))
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Rec_Season=="Rec Season"], x$Percent_Reduction_L[x$Rec_Season=="Rec Season"]))
@@ -612,7 +620,7 @@ output$Rec_Geomeans <- renderPlot({
           rownames(rec_load.p)= rec_load.p$Year
           rec_load.p = rec_load.p[,!names(rec_load.p)%in%("Year")]
           # Bar plot singular - same as rec
-          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (GigaMPN/day)",col=c(colucol,loadcol))
           legend("topright",legend=c("Observed Loading - Rec","Observed Loading - Not Rec","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
           box(bty="l")
           barps <- barp[1,]
@@ -640,7 +648,7 @@ output$Rec_Geomeans <- renderPlot({
         # Create OG barplot with new legend.
         if(length(uni)>1){# determine whether one or two plot panels needed...
           par(mfrow=c(1,2))
-          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], main="Rec Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Rec_Season=="Rec Season"], main="Rec Season",ylab="E.coli Loading (GigaMPN/day)",col=c(colucols[1],loadcol))
           box(bty="l")
           # x-axis arguments for boxplot based on barplot placement
           ax <- c(barp[1,],barp[2,])
@@ -662,7 +670,7 @@ output$Rec_Geomeans <- renderPlot({
                   lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
         }else{
           par(mfrow=c(1,1))
-          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          barp <- barplot(t(rec_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (GigaMPN/day)",col=c(colucol,loadcol))
           box(bty="l")
 
           # x-axis arguments for boxplot based on barplot placement
@@ -807,7 +815,7 @@ output$Irg_Geomeans <- renderPlot({
         rownames(irg_load.p)= irg_load.p$Year
         irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
         # Irg barplot
-        barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+        barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main="Irrigation Season",ylab="E.coli Loading (GigaMPN/day)",col=c(colucols[1],loadcol))
         box(bty="l")
         barps <- barp[1,]
         barperc <- data.frame(cbind(barps,x$Observed_Loading[x$Irg_Season=="Irrigation Season"], x$Percent_Reduction_L[x$Irg_Season=="Irrigation Season"]))
@@ -838,7 +846,7 @@ output$Irg_Geomeans <- renderPlot({
           rownames(irg_load.p)= irg_load.p$Year
           irg_load.p = irg_load.p[,!names(irg_load.p)%in%("Year")]
           # Bar plot singular - same as irg
-          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim), main=uni,ylab="E.coli Loading (GigaMPN/day)",col=c(colucol,loadcol))
           legend("topright",legend=c("Observed Loading - Irrigation","Observed Loading - Not Irrigation","TMDL", "% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2],loadcol,"white"), border=c("black","black","black","white"),cex=1)
           box(bty="l")
           barps <- barp[1,]
@@ -866,7 +874,7 @@ output$Irg_Geomeans <- renderPlot({
         # Create OG barplot with new legend.
         if(length(uni)>1){# determine whether one or two plot panels needed...
           par(mfrow=c(1,2))
-          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Irrigation Season"], main="Irrigation Season",ylab="E.coli Loading (MPN/day)",col=c(colucols[1],loadcol))
+          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year[x$Irg_Season=="Irrigation Season"], main="Irrigation Season",ylab="E.coli Loading (GigaMPN/day)",col=c(colucols[1],loadcol))
           box(bty="l")
           # x-axis arguments for boxplot based on barplot placement
           ax <- c(barp[1,],barp[2,])
@@ -888,7 +896,7 @@ output$Irg_Geomeans <- renderPlot({
                   lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(colucols[2], loadcol),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
         }else{
           par(mfrow=c(1,1))
-          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (MPN/day)",col=c(colucol,loadcol))
+          barp <- barplot(t(irg_load.p), beside=T, ylim=c(0, uplim1), names.arg=x$Year, main=uni,ylab="E.coli Loading (GigaMPN/day)",col=c(colucol,loadcol))
           box(bty="l")
 
           # x-axis arguments for boxplot based on barplot placement
@@ -922,7 +930,7 @@ output$LDC <- renderPlot({
   # Pull out observed loadings (E.coli data)
   ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
 
-  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (MPN/day)", xlim=c(0, 100), ylim=c(0,max(c(ecoli.loads$Observed_Loading, ecoli.loads$Loading_Capacity))), main=paste("Load Duration Curve:",x$ML_Name[1]))
+  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(ecoli.loads$Observed_Loading, ecoli.loads$Loading_Capacity))), main=paste("Load Duration Curve:",x$ML_Name[1]))
   abline(v=10, lty=2)
   abline(v=40, lty=2)
   abline(v=60, lty=2)
