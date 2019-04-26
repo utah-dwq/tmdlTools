@@ -35,12 +35,14 @@ ui <- fluidPage(title="E.coli Data Explorer",
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
                                      h3("Bacterial Concentrations Over Time by Site"),
-                                     sidebarPanel(selectInput("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point"),
+                                     sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
                                                   br(),
                                                   br(),
-                                                  uiOutput("checkbox")),
+                                                  uiOutput("checkbox"),
+                                                  br(),
+                                                  uiOutput("checkbox1")),
                                      mainPanel(plotOutput("Time_Series"),
                                                hr(),
                                                br(),
@@ -237,12 +239,19 @@ observe({
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  timeseries <- workbook$Daily_Geomean_Data
+  if(!is.null(workbook$Flow_data)){
+    time1 = workbook$Daily_Geomean_Data$Date
+    time2 = workbook$Flow_data$Date
+    timeseries = unique(c(time1,time2))
+  }else{
+    timeseries <- workbook$Daily_Geomean_Data$Date
+  }
+
   sliderInput("tsdatrange",
                  label="Date Range",
-                 min=min(timeseries$Date),
-                 max=max(timeseries$Date),
-                 value = c(min(timeseries$Date),max(timeseries$Date)),
+                 min=min(timeseries),
+                 max=max(timeseries),
+                 value = c(min(timeseries),max(timeseries)),
                  dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
 
@@ -250,12 +259,21 @@ output$tsdatrange <- renderUI({
 # observeEvent(input$reset_input,{
 #   reset("date")})
 
-# Create checkbox menu based on sites present
+# Create checkbox menu for e.coli concentrations based on sites present
 output$checkbox <- renderUI({
   req(workbook$Daily_Geomean_Data)
   timeseries <- workbook$Daily_Geomean_Data
   choice <-  unique(timeseries$ML_Name)
-  checkboxGroupInput("checkbox","Select Site(s)", choices = choice, selected = choice[1])
+  checkboxGroupInput("checkbox","Select E.coli Site(s)", choices = choice, selected = choice[1])
+
+})
+
+# Create checkbox menu for flow based on tabs and sites present
+output$checkbox1 <- renderUI({
+  req(workbook$Flow_data)
+  flow <- workbook$Flow_data
+  choice <-  unique(flow$ML_Name)
+  checkboxGroupInput("checkbox1","Select Flow Site(s)", choices = choice, selected = character(0))
 
 })
 
@@ -270,6 +288,11 @@ observe({
     timeseriesdat$max = input$tsdatrange[2] 
   }
   timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
+  
+  x1 = workbook$Flow_data
+  x1 = x1[x1$ML_Name %in% input$checkbox1,]
+  timeseriesdat$x1 <- x1[x1$Date>timeseriesdat$min&x1$Date<timeseriesdat$max,]
+
 })
 
 output$Time_Series <- renderPlot({
@@ -284,17 +307,16 @@ output$Time_Series <- renderPlot({
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
   colrs <- yarrr::piratepal("basel")
-
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
   abline(h=crits$maxcrit,col="orange", lwd=2)
   abline(h=crits$geomcrit, col="red", lwd=2)
-  text(min+150,crits$maxcrit-100, paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"))
-  text(min+400,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
+  text(min+200,crits$maxcrit-100, paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"))
+  text(min+500,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
   site = vector()
   colr = vector()
-  # Start plotting
+  # Start plotting ecoli concentrations
   for(i in 1:length(uni.sites)){
     y = x[x$ML_Name==uni.sites[i],]
     perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
@@ -306,6 +328,30 @@ output$Time_Series <- renderPlot({
     colr[i] = colrs[i]
   }
   l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1)
+  
+  # Start plotting flow
+  if(!is.null(input$checkbox1)){
+    x1 = timeseriesdat$x1
+    uni.sites.1 = unique(x1$ML_Name)
+    colrs1 <- yarrr::piratepal("basel")
+    
+    site1 = vector()
+    colr1 = vector()
+    par(new = TRUE)
+    plot(1, type="n", xlab="", ylab="", axes = F, xlim=c(min, max), ylim = c(0,max(x1$Flow)))
+    axis(side = 4)
+    mtext(side = 4, line = 3, "Flow (cfs)")
+    for(i in 1:length(uni.sites.1)){
+      y1 = x1[x1$ML_Name==uni.sites.1[i],]
+      if(input$plottype=="Line"){
+        lines(y1$Flow~y1$Date, lwd=1, lty=1, col=colrs1[i])
+      }
+      points(y1$Flow~y1$Date, pch=21, cex=2, col="black", bg=colrs1[i])
+      site1[i] = uni.sites.1[i]
+      colr1[i] = colrs1[i]
+    }
+    l=legend("topright",c(site1),col="black",pt.bg=c(colrs1), pch=21, bty="n", pt.cex=2,cex=1)
+  }
 })
 
 
