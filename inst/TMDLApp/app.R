@@ -289,21 +289,23 @@ observe({
   }
   timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
   
+})
+
+observe({
+  req(input$checkbox1)
   x1 = workbook$Flow_data
   x1 = x1[x1$ML_Name %in% input$checkbox1,]
   timeseriesdat$x1 <- x1[x1$Date>timeseriesdat$min&x1$Date<timeseriesdat$max,]
-
 })
 
 output$Time_Series <- renderPlot({
-  req(input$checkbox)
   req(timeseriesdat$min,timeseriesdat$max)
-
+if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Plot inputs from reactive values
   x = timeseriesdat$x
   min = timeseriesdat$min
   max = timeseriesdat$max
-
+  
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
   colrs <- yarrr::piratepal("basel")
@@ -316,24 +318,27 @@ output$Time_Series <- renderPlot({
   text(min+500,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
   site = vector()
   colr = vector()
-  # Start plotting ecoli concentrations
-  for(i in 1:length(uni.sites)){
-    y = x[x$ML_Name==uni.sites[i],]
-    perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
-    if(input$plottype=="Line"){
-      lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])
+ 
+  if(!is.null(input$checkbox)){
+    # Start plotting ecoli concentrations
+    for(i in 1:length(uni.sites)){
+      y = x[x$ML_Name==uni.sites[i],]
+      perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
+      if(input$plottype=="Line"){
+        lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])
+      }
+      points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=colrs[i])
+      site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
+      colr[i] = colrs[i]
     }
-    points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=colrs[i])
-    site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
-    colr[i] = colrs[i]
+    l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1)
   }
-  l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1)
   
   # Start plotting flow
   if(!is.null(input$checkbox1)){
     x1 = timeseriesdat$x1
     uni.sites.1 = unique(x1$ML_Name)
-    colrs1 <- yarrr::piratepal("basel")
+    colrs1 <- yarrr::piratepal("basel", trans = 0.5)
     
     site1 = vector()
     colr1 = vector()
@@ -346,12 +351,13 @@ output$Time_Series <- renderPlot({
       if(input$plottype=="Line"){
         lines(y1$Flow~y1$Date, lwd=1, lty=1, col=colrs1[i])
       }
-      points(y1$Flow~y1$Date, pch=21, cex=2, col="black", bg=colrs1[i])
+      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=colrs1[i])
       site1[i] = uni.sites.1[i]
       colr1[i] = colrs1[i]
     }
-    l=legend("topright",c(site1),col="black",pt.bg=c(colrs1), pch=21, bty="n", pt.cex=2,cex=1)
+    l=legend("topright",c(site1),col="black",pt.bg=c(colrs1), pch=23, bty="n", pt.cex=2,cex=1)
   }
+}
 })
 
 
