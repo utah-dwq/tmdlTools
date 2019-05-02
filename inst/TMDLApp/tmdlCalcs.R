@@ -78,8 +78,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   if(!length(unique(ecoli.dat$ML_Name))== length(unique(ecoli.dat$MLID))){
     warning("Monitoring location names are not specific to MLID's. Function will calculate separate daily geomeans for each ML_Name/MLID combination")
   }
-  ecoli.day.gmean <- aggregate(E.coli~Date+ML_Name+MLID, data=ecoli.dat, FUN=function(x){exp(mean(log(x)))})
-  names(ecoli.day.gmean)[names(ecoli.day.gmean)=="E.coli"] <- "E.coli_Geomean"
+  ecoli.day.gmean = ecoli.dat%>%group_by(Date, ML_Name, MLID)%>%summarise(E.coli_Geomean = gmean(E.coli))
+  # ecoli.day.gmean1 <- aggregate(E.coli~Date+ML_Name+MLID, data=ecoli.dat, FUN=function(x){exp(mean(log(x)))})
+  # test = merge(ecoli.day.gmean, ecoli.day.gmean1, all = TRUE)
+  #names(ecoli.day.gmean1)[names(ecoli.day.gmean1)=="E.coli"] <- "E.coli_Geomean"
   
   # Determine calendar season for LDC - taken from https://stackoverflow.com/questions/9500114/find-which-season-a-particular-date-belongs-to
   getSeason <- function(DATES) {
@@ -140,7 +142,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
     ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
     tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
+    n_mo <- aggregate(TMDL~month+MLID+ML_Name, dat = ecoli.ldc, FUN=length)
+    names(n_mo)[names(n_mo)=="TMDL"]<- "Ncount_mo_L"
     mo_load <- merge(ol_mo,tmdl_mo, all=TRUE)
+    mo_load <- merge(mo_load, n_mo, all=TRUE)
     mo_load <- mo_load[order(mo_load$month),]
     mo_load$Percent_Reduction_L <- ifelse(mo_load$Observed_Loading>mo_load$TMDL,round(perc.red(mo_load$TMDL,mo_load$Observed_Loading), digits=0),0)
     
@@ -148,13 +153,19 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ecoli.ldc$Year = year(ecoli.ldc$Date)
     ol_rec <- aggregate(Observed_Loading~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
     tmdl_rec <- aggregate(TMDL~Year+MLID+ML_Name+Rec_Season, dat=ecoli.ldc, FUN=gmean)
+    n_rec <- aggregate(TMDL~Year+MLID+ML_Name+Rec_Season, dat = ecoli.ldc, FUN=length)
+    names(n_rec)[names(n_rec)=="TMDL"]<- "Ncount_rec_L"
     rec_load <- merge(ol_rec,tmdl_rec, all=TRUE)
+    rec_load <- merge(rec_load, n_rec, all= TRUE)
     rec_load$Percent_Reduction_L <- ifelse(rec_load$Observed_Loading>rec_load$TMDL,round(perc.red(rec_load$TMDL,rec_load$Observed_Loading), digits=0),0)
     
     ## Loading by irrigation season ##
     ol_irg <- aggregate(Observed_Loading~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
     tmdl_irg <- aggregate(TMDL~Year+MLID+ML_Name+Irg_Season, dat=ecoli.ldc, FUN=gmean)
+    n_irg <- aggregate(TMDL~Year+MLID+ML_Name+Irg_Season, dat = ecoli.ldc, FUN=length)
+    names(n_irg)[names(n_irg)=="TMDL"]<- "Ncount_irg_L"
     irg_load <- merge(ol_irg,tmdl_irg, all=TRUE)
+    irg_load <- merge(irg_load, n_irg)
     irg_load$Percent_Reduction_L <- ifelse(irg_load$Observed_Loading>irg_load$TMDL,round(perc.red(irg_load$TMDL,irg_load$Observed_Loading), digits=0),0)
     
   }else{mo_load = data.frame(MLID=unique(ecoli.day.gmean$MLID))
@@ -164,15 +175,24 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   ## Concentration by month ##
     ecoli.day.gmean$month <- lubridate::month(ecoli.day.gmean$Date, label=TRUE)
     concen_mo <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=ecoli.day.gmean, FUN=gmean)
+    concen_mo_n <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=ecoli.day.gmean, FUN=length)
+    names(concen_mo_n)[names(concen_mo_n)=="E.coli_Geomean"] <- "Ncount_mo_C"
+    concen_mo = merge(concen_mo, concen_mo_n, all=TRUE)
     concen_mo$Percent_Reduction_C <- ifelse(concen_mo$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_mo$E.coli_Geomean), digits=0),0)
     
   ## Concentration by rec season ##
     ecoli.day.gmean$Year <- lubridate::year(ecoli.day.gmean$Date)
     concen_rec <- aggregate(E.coli_Geomean~Rec_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=gmean)
+    concen_rec_n <- aggregate(E.coli_Geomean~Rec_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=length)
+    names(concen_rec_n)[names(concen_rec_n)=="E.coli_Geomean"] <- "Ncount_rec_C"
+    concen_rec = merge(concen_rec, concen_rec_n, all=TRUE)
     concen_rec$Percent_Reduction_C <- ifelse(concen_rec$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_rec$E.coli_Geomean), digits=0),0)
 
   ## Concentration by irrigation season ##
     concen_irg <- aggregate(E.coli_Geomean~Irg_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=gmean)
+    concen_irg_n <- aggregate(E.coli_Geomean~Irg_Season+MLID+ML_Name+Year, dat=ecoli.day.gmean, FUN=length)
+    names(concen_irg_n)[names(concen_irg_n)=="E.coli_Geomean"] <- "Ncount_irg_C"
+    concen_irg = merge(concen_irg, concen_irg_n, all=TRUE)
     concen_irg$Percent_Reduction_C <- ifelse(concen_irg$E.coli_Geomean>geom_crit,round(perc.red(geom_crit,concen_irg$E.coli_Geomean), digits=0),0)
 
   # Merge monthly data and write to new datasheet 
