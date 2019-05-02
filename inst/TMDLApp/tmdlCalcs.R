@@ -78,10 +78,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   if(!length(unique(ecoli.dat$ML_Name))== length(unique(ecoli.dat$MLID))){
     warning("Monitoring location names are not specific to MLID's. Function will calculate separate daily geomeans for each ML_Name/MLID combination")
   }
-  ecoli.day.gmean = ecoli.dat%>%group_by(Date, ML_Name, MLID)%>%summarise(E.coli_Geomean = gmean(E.coli))
-  # ecoli.day.gmean1 <- aggregate(E.coli~Date+ML_Name+MLID, data=ecoli.dat, FUN=function(x){exp(mean(log(x)))})
+  #ecoli.day.gmean = ecoli.dat%>%group_by(Date, ML_Name, MLID)%>%summarise(E.coli_Geomean = gmean(E.coli))
+  ecoli.day.gmean <- aggregate(E.coli~Date+ML_Name+MLID, data=ecoli.dat, FUN=function(x){exp(mean(log(x)))})
   # test = merge(ecoli.day.gmean, ecoli.day.gmean1, all = TRUE)
-  #names(ecoli.day.gmean1)[names(ecoli.day.gmean1)=="E.coli"] <- "E.coli_Geomean"
+  names(ecoli.day.gmean)[names(ecoli.day.gmean)=="E.coli"] <- "E.coli_Geomean"
   
   # Determine calendar season for LDC - taken from https://stackoverflow.com/questions/9500114/find-which-season-a-particular-date-belongs-to
   getSeason <- function(DATES) {
@@ -141,6 +141,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ## Loading by month ##
     ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
     ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
+    tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=geomean_n)
     tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
     n_mo <- aggregate(TMDL~month+MLID+ML_Name, dat = ecoli.ldc, FUN=length)
     names(n_mo)[names(n_mo)=="TMDL"]<- "Ncount_mo_L"
