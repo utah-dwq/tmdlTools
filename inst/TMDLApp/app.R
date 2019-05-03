@@ -139,7 +139,7 @@ output$dwnloadbutton <- renderUI({
    }
    convertds = out$Inputs$Value[out$Inputs$Parameter=="Rec Season Start"|out$Inputs$Parameter=="Rec Season End"|out$Inputs$Parameter=="Irrigation Season Start"|out$Inputs$Parameter=="Irrigation Season End"]
    convertds1 = as.Date(convertds, origin = "1899-12-30")
-   convertds1 = format(convertds1, "%b %d")
+   convertds1 = format(convertds1, "%b-%d")
    out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
    workbook$Ecoli_data = out$Ecoli_data
    workbook$Inputs = out$Inputs

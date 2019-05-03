@@ -141,7 +141,6 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ## Loading by month ##
     ecoli.ldc$month <- month(ecoli.ldc$Date, label=TRUE)
     ol_mo <- aggregate(Observed_Loading~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
-    tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=geomean_n)
     tmdl_mo <- aggregate(TMDL~month+MLID+ML_Name, dat=ecoli.ldc, FUN=gmean)
     n_mo <- aggregate(TMDL~month+MLID+ML_Name, dat = ecoli.ldc, FUN=length)
     names(n_mo)[names(n_mo)=="TMDL"]<- "Ncount_mo_L"
