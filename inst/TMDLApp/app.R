@@ -137,10 +137,10 @@ output$dwnloadbutton <- renderUI({
        out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
        names(out) = sheets
    }
-   convertds = out$Inputs$Value[out$Inputs$Parameter=="Rec Season Start"|out$Inputs$Parameter=="Rec Season End"|out$Inputs$Parameter=="Irrigation Season Start"|out$Inputs$Parameter=="Irrigation Season End"]
-   convertds1 = as.Date(convertds, origin = "1899-12-30")
-   convertds1 = format(convertds1, "%b-%d")
-   out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
+   # convertds = out$Inputs$Value[out$Inputs$Parameter=="Rec Season Start"|out$Inputs$Parameter=="Rec Season End"|out$Inputs$Parameter=="Irrigation Season Start"|out$Inputs$Parameter=="Irrigation Season End"]
+   # convertds1 = as.Date(convertds, origin = "1899-12-30")
+   # convertds1 = format(convertds1, "%b-%d")
+   # out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
    workbook$Ecoli_data = out$Ecoli_data
    workbook$Inputs = out$Inputs
    if(!is.null(out$Daily_Geomean_Data)){
@@ -439,7 +439,7 @@ output$Monthly_Geomeans <- renderPlot({
     box(bty="l")
     abline(h=crits$geomcrit, col="black", lwd=2)
     ncount = paste0("n=",x$Ncount)
-    mtext(ncount, side = 1, line = 3, at = barp)
+    mtext(ncount, side = 1, line = 0, cex=0.8, at = barp)
     barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
     barperc <- barperc[barperc$X3>0,]
     if(dim(barperc)[1]>0){
@@ -460,7 +460,7 @@ output$Monthly_Geomeans <- renderPlot({
       abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
       legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
       box(bty="l")
-      mtext(ncount, side = 1, line = 3, at = barp)
+      mtext(ncount, side = 1, line = 0, cex = 0.8, at = barp)
 
       # x-axis arguments for boxplot based on barplot placement
 
@@ -481,7 +481,9 @@ output$Monthly_Geomeans <- renderPlot({
       names(datstack)[names(datstack)=="value"]<-"Loading"
       x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
       x_ncount <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=length)
+      x_ncount <- x_ncount[x_ncount$Meas_Type=="Observed_Loading",]
       names(x_ncount)[names(x_ncount)=="Loading"]<- "Ncount"
+      x_ncount = x_ncount[order(x_ncount$month),]
       x = dcast(data=x, month~Meas_Type, value.var="Loading")
       x = x[order(x$month),]
       x$Percent_Reduction = ifelse(x$Observed_Loading>x$TMDL,round(perc.red(x$TMDL,x$Observed_Loading), digits=0),0)
@@ -499,9 +501,9 @@ output$Monthly_Geomeans <- renderPlot({
         barperc$V3 <- paste(barperc$V3,"%",sep="")
         text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
       }
-      ncountpos = c(barp[1,],barp[2,])
-      ncountpos = ncountpos[order(ncountpos)]
-      text(ncountpos, 5, labels = c(paste0("n=",x_ncount$Ncount)), cex=0.8)
+      ncountpos = colMeans(barp)
+      mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
+      #text(ncountpos, max(c(x$Observed_Loading,x$TMDL))*.05, labels = c(paste0("n=",x_ncount$Ncount)), cex=0.8)
       if(input$mon_medplot){
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(datstack$Loading,1)
@@ -511,7 +513,7 @@ output$Monthly_Geomeans <- renderPlot({
         barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
         legend("topright",legend=c("Observed Loading","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
         box(bty="l")
-        text(ncountpos, 5, labels = c(paste0("n=",x_ncount$Ncount)), cex=0.8)
+        mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
         # x-axis arguments for boxplot based on barplot placement
         ax <- c(barp[1,],barp[2,])
         ax_spots = ax[order(ax)]
@@ -566,6 +568,7 @@ output$Rec_Geomeans <- renderPlot({
     # Create columns for "Rec Season" and "Not Rec Season" to separate into different bar plots.
     recstack <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "E.coli_Geomean")
     recstack1 = recstack[,!names(recstack)%in%"Year"]
+    recstack_ncount <- reshape2::dcast(data = x, Year~Rec_Season,value.var = "Ncount_rec_C")
     # Check to see if both rec and non rec seasons represented
     present = c("Rec Season", "zNotRec")%in%colnames(recstack)
     if(any(present==FALSE)){ # if rec or non rec are missing...
@@ -579,6 +582,7 @@ output$Rec_Geomeans <- renderPlot({
     legend("topright",legend=c("Rec Season", "Not Rec Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
     box(bty="l")
     abline(h=crits$geomcrit, col="black", lwd=2)
+    mtext(x$Ncount_rec_C, side = 1, line = 0, at = c(colMeans(rec_conc)), cex= 0.8)
 
     # Label bars that exceed
     # Get percent reductions
@@ -625,7 +629,7 @@ output$Rec_Geomeans <- renderPlot({
       abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
       legend("topright",legend=c("Rec Season","Not Rec Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
       box(bty="l")
-
+      #mtext(x$Ncount_rec_C, side = 1, line = 0, at = c(colMeans(rec_conc)), cex= 0.8)
       # x-axis arguments for boxplot based on barplot placement
       boxat = recperc[,"perc_at"]
       boxplot(y$E.coli_Geomean~y$Rec_Season+y$Year,

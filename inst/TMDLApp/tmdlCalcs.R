@@ -37,15 +37,15 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   flow_perc <- function(x){(1-percent_rank(x))*100} # gives each flow measurement a percent rank (what percentage of flows are higher than value?)
   
   ### Load the dataset from the workbook and convert to dates ###
-  wb.dat <- loadWorkbook(wb_path)
-  ecoli.dat <- readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
+  wb.dat <- openxlsx::loadWorkbook(wb_path)
+  ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
   ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
   
   # Add to list
   calcs$Ecoli_data <- ecoli.dat
   
   if("Flow_data"%in%wb.dat$sheet_names){
-    flow.dat <- readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
+    flow.dat <- openxlsx::readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
     flow.dat$Date <- as.Date(flow.dat$Date, origin="1899-12-30") 
     flo.dat = TRUE
   }else{flo.dat=FALSE}
@@ -53,7 +53,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   
   ### Obtain criteria from specs.dat sheet or function inputs ###
   if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
-    specs.dat <- readWorkbook(wb.dat, sheet="Inputs",startRow=1)
+    specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
     
     # Add to list
     calcs$Inputs <- specs.dat
@@ -62,8 +62,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
     cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
     mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
-    rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
-    irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
+    rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
+    irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
+    #rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
+    #irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
     
   ### Convert any "<" to min and max detection limits
   ecoli.dat$E.coli=gsub("<1",1,ecoli.dat$E.coli)
@@ -98,12 +100,12 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   ecoli.day.gmean$CalSeason <- getSeason(ecoli.day.gmean$Date)
   
   # Determine if each point falls within the rec season
-  rec_ssn1 = yday(as.Date(rec_ssn, "%m-%d"))
-  ecoli.day.gmean$Rec_Season = ifelse(yday(ecoli.day.gmean$Date)>=rec_ssn1[1]&yday(ecoli.day.gmean$Date)<=rec_ssn1[2],"Rec Season","Not Rec Season")
+  #rec_ssn1 = yday(as.Date(rec_ssn, "%m-%d"))
+  ecoli.day.gmean$Rec_Season = ifelse(yday(ecoli.day.gmean$Date)>=rec_ssn[1]&yday(ecoli.day.gmean$Date)<=rec_ssn[2],"Rec Season","Not Rec Season")
   
   # Determine if each point falls within the irrigation season
-  irg_ssn1 = yday(as.Date(irg_ssn, "%m-%d"))
-  ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn1[1]&yday(ecoli.day.gmean$Date)<=irg_ssn1[2],"Irrigation Season","Not Irrigation Season")
+  #irg_ssn1 = yday(as.Date(irg_ssn, "%m-%d"))
+  ecoli.day.gmean$Irg_Season = ifelse(yday(ecoli.day.gmean$Date)>=irg_ssn[1]&yday(ecoli.day.gmean$Date)<=irg_ssn[2],"Irrigation Season","Not Irrigation Season")
   
   # Add to list
   calcs$Daily_Geomean_Data <- ecoli.day.gmean
