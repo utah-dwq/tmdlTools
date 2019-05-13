@@ -79,6 +79,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      h3("Bacterial Loadings Across Flow Regimes"),
                                      p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
                                      sidebarPanel(uiOutput("ldcsite"),
+                                                  radioButtons("ldc_type", label = "Plot Type", choices = c("Scatterplot", "Boxplot"), selected = "Scatterplot", inline = TRUE),
                                                   selectInput("pt_type",
                                                               label = "Data Category",
                                                               choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")), width = 3),
@@ -1091,14 +1092,17 @@ output$LDC <- renderPlot({
   text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Low \n Flows")
   lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="firebrick3", lwd=2)
 
+
+# Plot types     
+if(input$ldc_type == "Scatterplot"){
   if(input$pt_type=="Calendar Seasons"){
     colpal <- colorspace::sequential_hcl(4)
     wine <- ecoli.loads[ecoli.loads$CalSeason=="Winter",]
     spre <- ecoli.loads[ecoli.loads$CalSeason=="Spring",]
     sume <- ecoli.loads[ecoli.loads$CalSeason=="Summer",]
     fale <- ecoli.loads[ecoli.loads$CalSeason=="Fall",]
-
-
+    
+    
     points(wine$Observed_Loading~wine$Flow_Percentile, pch=21, col="black", bg=colpal[4], cex=2)
     points(spre$Observed_Loading~spre$Flow_Percentile, pch=21, col="black", bg=colpal[3], cex=2)
     points(sume$Observed_Loading~sume$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
@@ -1106,35 +1110,46 @@ output$LDC <- renderPlot({
     legend("topright",legend=c("TMDL", "E.coli Loading - Winter", "E.coli Loading - Spring", "E.coli Loading - Summer","E.coli Loading - Fall"), bty="n", col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1)
   }
 
+  # Point colors
   if(input$pt_type=="Recreation Seasons"){
     colpal <- colorspace::rainbow_hcl(2)
     rec <- ecoli.loads[ecoli.loads$Rec_Season=="Rec Season",]
     nonrec <- ecoli.loads[ecoli.loads$Rec_Season=="Not Rec Season",]
-
+    
     points(rec$Observed_Loading~rec$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonrec$Observed_Loading~nonrec$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
     legend("topright",legend=c("TMDL","E.coli Loading - Rec", "E.coli Loading - Non-Rec"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
-
+    
   }
-
+  
   if(input$pt_type=="Irrigation Seasons"){
     colpal <- colorspace::terrain_hcl(2)
     irg <- ecoli.loads[ecoli.loads$Irg_Season=="Irrigation Season",]
     nonirg <- ecoli.loads[ecoli.loads$Irg_Season=="Not Irrigation Season",]
-
+    
     points(irg$Observed_Loading~irg$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonirg$Observed_Loading~nonirg$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
     legend("topright",legend=c("TMDL", "E.coli Loading - Irrigation", "E.coli Loading - No Irrigation"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
-
+    
   }
+}else{
+  # Add boxplots
+  ecoli.loads$Flow_Cat = "High"
+  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>10&ecoli.loads$Flow_Percentile<=40] = "Moist"
+  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>40&ecoli.loads$Flow_Percentile<=60] = "MidRange"
+  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>60&ecoli.loads$Flow_Percentile<=90] = "Dry"
+  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>90&ecoli.loads$Flow_Percentile<=100] = "Low"
+  ecoli.loads$Flow_Cat = factor(ecoli.loads$Flow_Cat, levels= c("High","Moist", "MidRange","Dry","Low"))
+  
+  boxplot(ecoli.loads$Observed_Loading~ecoli.loads$Flow_Cat, col=ggplot2::alpha("cyan4",0.7), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
+}
+  
+    
 })
 
 output$LDC_Data <- renderDT(workbook$LDC_Data,
                             rownames = FALSE,
                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
-
-
-
 
 
 }
