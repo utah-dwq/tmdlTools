@@ -56,7 +56,9 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("mon_unit_type"),
                                                   checkboxInput("mon_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Monthly_Geomeans", height="700px"),
-                                               DT::dataTableOutput("Monthly_Data", height=500))),
+                                               hr(),
+                                               br(),
+                                               div(DT::dataTableOutput("Monthly_Data"), style= "font-size:75%"))),
                             tabPanel("Rec/Non-Rec",
                                      h3("Bacterial Concentrations/Loadings by Year"),
                                      sidebarPanel(uiOutput("recsite"),
@@ -65,7 +67,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("rec_unit_type"),
                                                   checkboxInput("rec_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Rec_Geomeans", height="700px"),
-                                               DT::dataTableOutput("Rec_Data", height=500))),
+                                               div(DT::dataTableOutput("Rec_Data"), style= "font-size:75%"))),
                             tabPanel("Irrigation/Non-Irrigation",
                                      h3("Bacterial Concentrations/Loadings by Year"),
                                      sidebarPanel(uiOutput("irgsite"),
@@ -74,7 +76,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("irg_unit_type"),
                                                   checkboxInput("irg_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Irg_Geomeans", height="700px"),
-                                               DT::dataTableOutput("Irg_Data", height=500))),
+                                               div(DT::dataTableOutput("Irg_Data"), style= "font-size:75%"))),
                             tabPanel("Load Duration Curves",
                                      h3("Bacterial Loadings Across Flow Regimes"),
                                      p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
@@ -93,6 +95,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+###################################### FILE UPLOAD SECTION ################################
 
 # File Info
   workbook <- reactiveValues()
@@ -189,7 +193,6 @@ output$dwnloadbutton <- renderUI({
    }
  )
 
-
  observe({
    req(input$selectsheet)
    tableview = workbook[[input$selectsheet]]
@@ -224,7 +227,6 @@ output$ldcsite <- renderUI({
               choices=c(unique(workbook$LDC_Data$ML_Name)))
 })
 
-
 ## Save Criteria in own reactive values for use in all plots ##
 crits <- reactiveValues()
 
@@ -235,7 +237,7 @@ observe({
   crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
 })
 
-#### TIME SERIES SECTION ####
+################################# TIME SERIES SECTION ########################################
 
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
@@ -368,7 +370,7 @@ output$Time_Data <- renderDT(timeseriesdat$x,
                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
 
 
-#### MONTH TAB SECTION ####
+###################################### MONTH TAB SECTION #####################################
 
 # Sites to choose from
 output$monthsite <- renderUI({
@@ -502,9 +504,11 @@ output$Monthly_Geomeans <- renderPlot({
         barperc$V3 <- paste(barperc$V3,"%",sep="")
         text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
       }
+      
+      # Add ncounts
       ncountpos = colMeans(barp)
       mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
-      #text(ncountpos, max(c(x$Observed_Loading,x$TMDL))*.05, labels = c(paste0("n=",x_ncount$Ncount)), cex=0.8)
+
       if(input$mon_medplot){
         # Get axes right to accommodate boxplot overlay (if checkbox checked)
         uplim1 = quantile(datstack$Loading,1)
@@ -526,7 +530,25 @@ output$Monthly_Geomeans <- renderPlot({
   }
 })
 
-#### REC TAB SECTION ####
+# Observer to identify which data to show....
+observe({
+  req(selectedmonthdata$aggseldg)
+  if(input$mon_unit_type=="Concentration"){
+    selectedmonthdata$table = selectedmonthdata$aggseldg
+  }else{
+    data <- workbook$LDC_Data
+    data1 <- data[data$ML_Name==input$monthsite&data$Date>=input$mondatrange[1]&data$Date<=input$mondatrange[2],]
+    selectedmonthdata$table = data1
+  }
+})
+
+# Data table
+output$Monthly_Data <- renderDT(selectedmonthdata$table,
+                             rownames = FALSE,
+                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+
+
+################################## REC TAB SECTION ##########################################
 
 # Sites to choose from
 output$recsite <- renderUI({
@@ -791,7 +813,13 @@ output$Rec_Geomeans <- renderPlot({
 
 })
 
-#### IRRIGATION SEASON TAB ####
+# Data table
+output$Rec_Data <- renderDT(selectedmonthdata$table,
+                                rownames = FALSE,
+                                options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+
+
+############################### IRRIGATION SEASON TAB #######################################
 # Sites to choose from
 output$irgsite <- renderUI({
   req(workbook$Irg_Season_Data)
@@ -822,6 +850,7 @@ output$Irg_Geomeans <- renderPlot({
   # Color schemes (unless otherwise defined)
   legcols = colorspace::terrain_hcl(2)
   colucols = colorspace::terrain_hcl(2)
+  
   ### CONCENTRATION PLOTS ###
   if(input$irg_unit_type=="Concentration"){
     # Obtain data from irg.dat
@@ -1065,9 +1094,13 @@ output$Irg_Geomeans <- renderPlot({
 
 })
 
+# Data table
+output$Irg_Data <- renderDT(selectedmonthdata$table,
+                            rownames = FALSE,
+                            options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
 
 
-#### LOADING TAB ####
+########################################### LOADING TAB ######################################
 
 output$LDC <- renderPlot({
   req(input$pt_type)
