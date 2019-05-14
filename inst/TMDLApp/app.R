@@ -67,6 +67,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("rec_unit_type"),
                                                   checkboxInput("rec_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Rec_Geomeans", height="700px"),
+                                               hr(),
+                                               br(),
                                                div(DT::dataTableOutput("Rec_Data"), style= "font-size:75%"))),
                             tabPanel("Irrigation/Non-Irrigation",
                                      h3("Bacterial Concentrations/Loadings by Year"),
@@ -76,6 +78,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("irg_unit_type"),
                                                   checkboxInput("irg_medplot", label = strong("View Medians and Quartiles"))),
                                      mainPanel(plotOutput("Irg_Geomeans", height="700px"),
+                                               hr(),
+                                               br(),
                                                div(DT::dataTableOutput("Irg_Data"), style= "font-size:75%"))),
                             tabPanel("Load Duration Curves",
                                      h3("Bacterial Loadings Across Flow Regimes"),
@@ -604,7 +608,7 @@ output$Rec_Geomeans <- renderPlot({
       buddies=TRUE # beside becomes true
     }
     # The actual plot...
-    rec_conc <- barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+    rec_conc <- barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year", ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
     legend("topright",legend=c("Rec Season", "Not Rec Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
     box(bty="l")
     abline(h=crits$geomcrit, col="black", lwd=2)
@@ -657,7 +661,7 @@ output$Rec_Geomeans <- renderPlot({
       uplim1 = max(uplim, uplim1)
 
       # Create original bar plot with different legend
-      barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      barplot(t(recstack1), beside=buddies, names.arg = recstack$Year, main="E.coli Geomeans by Year", ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
       abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
       legend("topright",legend=c("Rec Season","Not Rec Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
       box(bty="l")
@@ -813,11 +817,17 @@ output$Rec_Geomeans <- renderPlot({
 
 })
 
-# Data table
-output$Rec_Data <- renderDT(selectedmonthdata$table,
-                                rownames = FALSE,
-                                options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
-
+observe({
+  req(input$rec_unit_type)
+  rec_data = workbook$Rec_Season_Data
+  recdat <- rec_data[rec_data$ML_Name==input$recsite,]
+  recdat = recdat[order(recdat$Year),]
+  # Data table
+  output$Rec_Data <- renderDT(recdat,
+                              rownames = FALSE,
+                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+  
+})
 
 ############################### IRRIGATION SEASON TAB #######################################
 # Sites to choose from
@@ -874,7 +884,7 @@ output$Irg_Geomeans <- renderPlot({
       buddies=TRUE # beside becomes true
     }
     # The actual plot...
-    irg_conc <- barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+    irg_conc <- barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year", ylim=c(0, uplim*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
     legend("topright",legend=c("Irrigation Season", "Not Irrigation Season","Geomean Standard","% Reduction Needed"), bty="n", fill=c(legcols[1],legcols[2], NA,NA), border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,2,NA),cex=1)
     box(bty="l")
     abline(h=crits$geomcrit, col="black", lwd=2)
@@ -926,7 +936,7 @@ output$Irg_Geomeans <- renderPlot({
       uplim1 = max(uplim, uplim1)
 
       # Create original bar plot with different legend
-      barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year",las=2, ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
+      barplot(t(irgstack1), beside=buddies, names.arg = irgstack$Year, main="E.coli Geomeans by Year", ylim=c(0, uplim1*1.1), ylab="E.coli Concentration (MPN/100 mL)",col=colucols)
       abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
       legend("topright",legend=c("Irrigation Season","Not Irrigation Season","Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,NA,NA,1),fill=c(legcols[1],legcols[2],NA,NA,"white"),border=c("black","black","white","white","white"),lty=c(NA,NA,1,2,NA),lwd=c(NA,NA,3,2,NA),cex=1)
       box(bty="l")
@@ -1094,10 +1104,17 @@ output$Irg_Geomeans <- renderPlot({
 
 })
 
-# Data table
-output$Irg_Data <- renderDT(selectedmonthdata$table,
-                            rownames = FALSE,
-                            options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+observe({
+  req(input$irg_unit_type)
+  irg_data = workbook$Irg_Season_Data
+  irgdat <- irg_data[irg_data$ML_Name==input$irgsite,]
+  irgdat = irgdat[order(irgdat$Year),]
+  # Data table
+  output$Irg_Data <- renderDT(irgdat,
+                              rownames = FALSE,
+                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+  
+})
 
 
 ########################################### LOADING TAB ######################################
@@ -1166,6 +1183,7 @@ if(input$ldc_type == "Scatterplot"){
     
   }
 }else{
+  colpal <- colorspace::sequential_hcl(4)
   # Add boxplots
   ecoli.loads$Flow_Cat = "High"
   ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>10&ecoli.loads$Flow_Percentile<=40] = "Moist"
@@ -1174,8 +1192,10 @@ if(input$ldc_type == "Scatterplot"){
   ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>90&ecoli.loads$Flow_Percentile<=100] = "Low"
   ecoli.loads$Flow_Cat = factor(ecoli.loads$Flow_Cat, levels= c("High","Moist", "MidRange","Dry","Low"))
   
-  boxplot(ecoli.loads$Observed_Loading~ecoli.loads$Flow_Cat, col=ggplot2::alpha("cyan4",0.7), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
-}
+  boxplot(ecoli.loads$Observed_Loading~ecoli.loads$Flow_Cat, col=ggplot2::alpha(colpal[1],0.5), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
+  legend("topright",legend=c("TMDL", "E.coli Loading"), bty="n", col=c("firebrick3","black"), lty=c(1,NA),lwd=c(2,NA),pch=c(NA,22), pt.bg=c(NA,ggplot2::alpha(colpal[1],0.5)), pt.cex=c(NA,2),cex=1)
+  
+  }
   
     
 })
@@ -1183,8 +1203,6 @@ if(input$ldc_type == "Scatterplot"){
 output$LDC_Data <- renderDT(workbook$LDC_Data,
                             rownames = FALSE,
                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
-
-
 }
 
 # Run the application
