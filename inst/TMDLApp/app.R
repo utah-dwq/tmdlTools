@@ -318,6 +318,7 @@ output$Time_Series <- renderPlot({
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Plot inputs from reactive values
   x = timeseriesdat$x
+  ecoli <<- x
   min = timeseriesdat$min
   max = timeseriesdat$max
   
@@ -352,6 +353,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Start plotting flow
   if(!is.null(input$checkbox1)){
     x1 = timeseriesdat$x1
+    flow <<- x1
     uni.sites.1 = unique(x1$ML_Name)
     colrs1 <- yarrr::piratepal("basel", trans = 0.5)
     
