@@ -262,10 +262,6 @@ output$tsdatrange <- renderUI({
                  dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
 
-# Reset date range on button click
-# observeEvent(input$reset_input,{
-#   reset("date")})
-
 # Create checkbox menu for e.coli concentrations based on sites present
 output$checkbox <- renderUI({
   req(workbook$Daily_Geomean_Data)
@@ -286,6 +282,18 @@ output$checkbox1 <- renderUI({
 
 # Create timeseries data object based on data input, sites, and date ranges selected
 timeseriesdat <- reactiveValues()
+
+# Assign site colors
+observe({
+  req(workbook$Daily_Geomean_Data)
+  colors = RColorBrewer::brewer.pal(11, "Spectral")
+  sites = unique(workbook$Daily_Geomean_Data$ML_Name)
+  nsites = length(sites)
+  sitecols = data.frame(ML_Name = sites, ML_Col = sample(colors, nsites))
+  print(sitecols)
+  timeseriesdat$sitecols = sitecols
+})
+
 observe({
   req(input$checkbox)
   x = workbook$Daily_Geomean_Data
@@ -338,7 +346,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = colrs[i]
     }
-    l=legend("topleft",c(site),col="black",pt.bg=c(colrs), pch=21, bty="n", pt.cex=2,cex=1)
+    l=legend("topleft",c(site),col="black",pt.bg=c(colr), pch=21, bty="n", pt.cex=2,cex=1)
   }
   
   # Start plotting flow
@@ -362,7 +370,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site1[i] = uni.sites.1[i]
       colr1[i] = colrs1[i]
     }
-    l=legend("topright",c(site1),col="black",pt.bg=c(colrs1), pch=23, bty="n", pt.cex=2,cex=1)
+    l=legend("topright",c(site1),col="black",pt.bg=c(colr1), pch=23, bty="n", pt.cex=2,cex=1)
   }
 }
 })
