@@ -286,11 +286,11 @@ timeseriesdat <- reactiveValues()
 # Assign site colors
 observe({
   req(workbook$Daily_Geomean_Data)
-  colors = RColorBrewer::brewer.pal(11, "Spectral")
+  colrs <- yarrr::piratepal("basel")
   sites = unique(workbook$Daily_Geomean_Data$ML_Name)
   nsites = length(sites)
-  sitecols = data.frame(ML_Name = sites, ML_Col = sample(colors, nsites))
-  print(sitecols)
+  ML_Col = as.character(rep(colrs, length.out = nsites))
+  sitecols = data.frame(ML_Name = sites, ML_Col = rep(colrs, length.out = nsites))
   timeseriesdat$sitecols = sitecols
 })
 
@@ -317,6 +317,7 @@ output$Time_Series <- renderPlot({
   req(timeseriesdat$min,timeseriesdat$max)
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Plot inputs from reactive values
+  colrs = timeseriesdat$sitecols
   x = timeseriesdat$x
   ecoli <<- x
   min = timeseriesdat$min
@@ -324,7 +325,6 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   
   # Get number of sites
   uni.sites <- unique(x$ML_Name)
-  colrs <- yarrr::piratepal("basel")
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
@@ -338,14 +338,15 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   if(!is.null(input$checkbox)){
     # Start plotting ecoli concentrations
     for(i in 1:length(uni.sites)){
+      concol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites[i]])
       y = x[x$ML_Name==uni.sites[i],]
       perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
       if(input$plottype=="Line"){
-        lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=colrs[i])
+        lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=concol)
       }
-      points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=colrs[i])
+      points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=concol)
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
-      colr[i] = colrs[i]
+      colr[i] = concol
     }
     l=legend("topleft",c(site),col="black",pt.bg=c(colr), pch=21, bty="n", pt.cex=2,cex=1)
   }
@@ -364,13 +365,14 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     axis(side = 4)
     mtext(side = 4, line = 3, "Flow (cfs)")
     for(i in 1:length(uni.sites.1)){
+      flowcol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites.1[i]])
       y1 = x1[x1$ML_Name==uni.sites.1[i],]
       if(input$plottype=="Line"){
-        lines(y1$Flow~y1$Date, lwd=1, lty=1, col=colrs1[i])
+        lines(y1$Flow~y1$Date, lwd=1, lty=1, col=flowcol)
       }
-      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=colrs1[i])
+      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=flowcol)
       site1[i] = uni.sites.1[i]
-      colr1[i] = colrs1[i]
+      colr1[i] = flowcol
     }
     l=legend("topright",c(site1),col="black",pt.bg=c(colr1), pch=23, bty="n", pt.cex=2,cex=1)
   }
