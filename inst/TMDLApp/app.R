@@ -283,48 +283,44 @@ output$checkbox1 <- renderUI({
 # Create timeseries data object based on data input, sites, and date ranges selected
 timeseriesdat <- reactiveValues()
 
-# Assign site colors
+# Create ecoli dataset and place date range and colors into reactive object
 observe({
   req(workbook$Daily_Geomean_Data)
+  # Assign site colors
   colrs <- yarrr::piratepal("basel")
   sites = unique(workbook$Daily_Geomean_Data$ML_Name)
   nsites = length(sites)
   ML_Col = as.character(rep(colrs, length.out = nsites))
   sitecols = data.frame(ML_Name = sites, ML_Col = rep(colrs, length.out = nsites))
   timeseriesdat$sitecols = sitecols
-})
-
-observe({
-  req(input$checkbox)
+  
+  # Sort to ecoli sites and date range
   x = workbook$Daily_Geomean_Data
   x = x[x$ML_Name %in% input$checkbox,]
   if(!is.null(input$tsdatrange)){
     timeseriesdat$min = input$tsdatrange[1]
     timeseriesdat$max = input$tsdatrange[2] 
   }
-  timeseriesdat$x <- x[x$Date>timeseriesdat$min&x$Date<timeseriesdat$max,]
+  timeseriesdat$x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
   
 })
 
+# Create flow dataset 
 observe({
   req(input$checkbox1)
   x1 = workbook$Flow_data
   x1 = x1[x1$ML_Name %in% input$checkbox1,]
-  timeseriesdat$x1 <- x1[x1$Date>timeseriesdat$min&x1$Date<timeseriesdat$max,]
+  timeseriesdat$x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
 })
 
 output$Time_Series <- renderPlot({
   req(timeseriesdat$min,timeseriesdat$max)
-if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
-  # Plot inputs from reactive values
   colrs = timeseriesdat$sitecols
-  x = timeseriesdat$x
-  ecoli <<- x
   min = timeseriesdat$min
   max = timeseriesdat$max
-  
-  # Get number of sites
-  uni.sites <- unique(x$ML_Name)
+
+# Base plot  
+if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
@@ -334,8 +330,14 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   text(min+500,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
   site = vector()
   colr = vector()
- 
+}
+
+# E.coli plots
   if(!is.null(input$checkbox)){
+    x = timeseriesdat$x
+    # Get number of sites
+    uni.sites <- unique(x$ML_Name)
+    
     # Start plotting ecoli concentrations
     for(i in 1:length(uni.sites)){
       concol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites[i]])
@@ -351,37 +353,43 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     l=legend("topleft",c(site),col="black",pt.bg=c(colr), pch=21, bty="n", pt.cex=2,cex=1)
   }
   
-  # Start plotting flow
+# Flow plots
   if(!is.null(input$checkbox1)){
     x1 = timeseriesdat$x1
-    flow <<- x1
     uni.sites.1 = unique(x1$ML_Name)
-    colrs1 <- yarrr::piratepal("basel", trans = 0.5)
-    
     site1 = vector()
     colr1 = vector()
     par(new = TRUE)
     plot(1, type="n", xlab="", ylab="", axes = F, xlim=c(min, max), ylim = c(0,max(x1$Flow)))
     axis(side = 4)
-    mtext(side = 4, line = 3, "Flow (cfs)")
+    mtext(side = 4, line = 2, "Flow (cfs)")
     for(i in 1:length(uni.sites.1)){
       flowcol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites.1[i]])
       y1 = x1[x1$ML_Name==uni.sites.1[i],]
       if(input$plottype=="Line"){
         lines(y1$Flow~y1$Date, lwd=1, lty=1, col=flowcol)
       }
-      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=flowcol)
+      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=ggplot2::alpha(flowcol, 0.6))
       site1[i] = uni.sites.1[i]
       colr1[i] = flowcol
     }
-    l=legend("topright",c(site1),col="black",pt.bg=c(colr1), pch=23, bty="n", pt.cex=2,cex=1)
+    l=legend("topright",c(site1),col="black",pt.bg=c(ggplot2::alpha(colr1, 0.6)), pch=23, bty="n", pt.cex=2,cex=1)
   }
-}
 })
 
+# What data to show in table
+observe({
+  req(workbook$Daily_Geomean_Data)
+  if(!is.null(timeseriesdat$x1)){
+    ecoli_ts = timeseriesdat$x
+    flow_ts = timeseriesdat$x1
+    timeseriesdat$tabledata = merge(ecoli_ts, flow_ts, all = TRUE)
+  }else{
+    timeseriesdat$tabledata = timeseriesdat$x
+  }
+})
 
-
-output$Time_Data <- renderDT(timeseriesdat$x,
+output$Time_Data <- renderDT(timeseriesdat$tabledata,
                              rownames = FALSE,
                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
 
@@ -409,10 +417,6 @@ output$mondatrange <- renderUI({
               value = c(min(monthdata$Date),max(monthdata$Date)),
               dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
-
-# Reset Date Range
-# observeEvent(input$reset_input1,{
-#   reset("date1")})
 
 # Craft drop down menu for concentration and loading
 output$mon_unit_type <- renderUI({
