@@ -554,10 +554,14 @@ output$Monthly_Geomeans <- renderPlot({
 observe({
   req(selectedmonthdata$aggseldg)
   if(input$mon_unit_type=="Concentration"){
-    selectedmonthdata$table = selectedmonthdata$aggseldg
+    table = selectedmonthdata$aggseldg
+    table = table[order(table$month),]
+    selectedmonthdata$table = table
   }else{
     data <- workbook$LDC_Data
     data1 <- data[data$ML_Name==input$monthsite&data$Date>=input$mondatrange[1]&data$Date<=input$mondatrange[2],]
+    data1$month = lubridate::month(data1$Date, label = TRUE, abbr = TRUE)
+    data1 = data1[order(data1$month),]
     selectedmonthdata$table = data1
   }
 })
