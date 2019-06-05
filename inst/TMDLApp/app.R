@@ -14,7 +14,6 @@ source("tmdlCalcs.R")
 
 perc.red <- function(x,y){100-x/y*100}
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(title="E.coli Data Explorer",
                 titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
                 tabsetPanel(id="all_the_things",
@@ -47,6 +46,10 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
+                            tabPanel("Upstream-Downstream",
+                                     h3("Bacterial Concentrations/Loadings from Upstream to Downstream"),
+                                     sidebarPanel(uiOutput("ud_unit_type")),
+                                     mainPanel(plotOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
                                      sidebarPanel(uiOutput("monthsite"),
@@ -104,6 +107,7 @@ server <- function(input, output) {
 
 # File Info
   workbook <- reactiveValues()
+  snames <- reactiveValues()
 # Obtain file path
   observeEvent(input$workbook,{
     fileup = input$workbook
@@ -119,16 +123,6 @@ server <- function(input, output) {
    disable("loadcalcs")
  })
 
-# Create drop down menu of sheets contained in xlsx file
-
- output$selectsheet <- renderUI({
-   req(workbook$Inputs)
-   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c("Raw Concentrations"="Ecoli_data","Flow"="Flow_data",
-                                                                                          "Daily Geomean Concentrations" = "Daily_Geomean_Data", "Loadings"="LDC_Data",
-                                                                                          "Monthly Geomeans" = "Monthly_Data", "Rec/Non-Rec Geomeans"= "Rec_Season_Data",
-                                                                                          "Irrigation/Non-Irrigation Geomeans"="Irg_Season_Data"))
- })
-
 # Download button that shows after sheet widget
 output$dwnloadbutton <- renderUI({
   req(input$selectsheet)
@@ -141,17 +135,14 @@ output$dwnloadbutton <- renderUI({
    if(input$loadcalcs=="Yes"){
      out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
    }else{
-       dat = openxlsx::loadWorkbook(workbook$wb_path)
-       sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
-       out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
-       names(out) = sheets
+     dat = openxlsx::loadWorkbook(workbook$wb_path)
+     sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
+     out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
+     names(out) = sheets
    }
-   # convertds = out$Inputs$Value[out$Inputs$Parameter=="Rec Season Start"|out$Inputs$Parameter=="Rec Season End"|out$Inputs$Parameter=="Irrigation Season Start"|out$Inputs$Parameter=="Irrigation Season End"]
-   # convertds1 = as.Date(convertds, origin = "1899-12-30")
-   # convertds1 = format(convertds1, "%b-%d")
-   # out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
    workbook$Ecoli_data = out$Ecoli_data
    workbook$Inputs = out$Inputs
+   workbook$Site_order = out$Site_order
    if(!is.null(out$Daily_Geomean_Data)){
      out$Daily_Geomean_Data$E.coli_Geomean = round(out$Daily_Geomean_Data$E.coli_Geomean,1)
      workbook$Daily_Geomean_Data = out$Daily_Geomean_Data
@@ -169,8 +160,16 @@ output$dwnloadbutton <- renderUI({
        workbook$LDC_Data = ldc
      }
    }
+   snames$sheets = names(workbook)[!names(workbook)=="wb_path"]
  })
 
+ # Create drop down menu of sheets contained in xlsx file
+ 
+ output$selectsheet <- renderUI({
+   req(workbook$Inputs)
+   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c(snames$sheets))
+ })
+ 
  # Object to be fed to the download handler
  wbdwn <- reactiveValues()
 
