@@ -410,7 +410,7 @@ output$UD_Geomeans <- renderPlotly({
   ranks <- workbook$Site_order
   usds_data = merge(selgeomeans, ranks, all.x = TRUE)
   usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
-  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(xaxis = list(title = "Site", font = "Arial, sans-serif"), yaxis = list(title = "E.coli Concentration (MPN/100 mL)", font = "Arial, sans-serif"), font = "Arial, sans-serif")
+  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(xaxis = list(title = "Site"), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"))
 })
 
 ###################################### MONTH TAB SECTION #####################################
