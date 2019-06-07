@@ -9,6 +9,7 @@ require(reshape2)
 require(markdown)
 require(dplyr)
 require(plyr)
+require(plotly)
 
 source("tmdlCalcs.R")
 
@@ -25,12 +26,10 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("loadcalcs"),
                                                   uiOutput("selectsheet"),
                                                   uiOutput("dwnloadbutton")),
-                                     mainPanel(
-                                       tabsetPanel(
-                                         tabPanel("Data View", DTOutput("datview"), style= "font-size:75%"),
-                                         tabPanel("Check Inputs", DTOutput("inputdat"), style= "font-size:75%")
-                                       )
-                                     )),
+                                     mainPanel(h4("Data View"),
+                                               h5("Toggle between sheets in the workbook using the drop down menu at the bottom of the sidebar."),
+                                               DTOutput("datview"), style= "font-size:75%")
+                                     ),
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
                                      h3("Bacterial Concentrations Over Time by Site"),
@@ -47,9 +46,10 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                br(),
                                                div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
                             tabPanel("Upstream-Downstream",
-                                     h3("Bacterial Concentrations/Loadings from Upstream to Downstream"),
-                                     sidebarPanel(uiOutput("ud_unit_type")),
-                                     mainPanel(plotOutput("UD_Geomeans", height="700px"))),
+                                     h3("Bacterial Concentrations Upstream to Downstream"),
+                                     h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations"),
+                                     sidebarPanel(uiOutput("usds_date")),
+                                     mainPanel(plotlyOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
                                      sidebarPanel(uiOutput("monthsite"),
@@ -134,7 +134,6 @@ output$dwnloadbutton <- renderUI({
    req(input$loadcalcs)
    if(input$loadcalcs=="Yes"){
      out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
-     print(out$Site_order)
    }else{
      dat = openxlsx::loadWorkbook(workbook$wb_path)
      sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
@@ -203,15 +202,10 @@ output$dwnloadbutton <- renderUI({
 
    # Load data tables on first page
    output$datview <- renderDT(tableview,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '600px', paging = FALSE, scrollX=TRUE))
 
  })
-
-  output$inputdat <- renderDT(workbook$Inputs,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
-
 
 # Add loading tab if loadings present
 
@@ -393,6 +387,31 @@ output$Time_Data <- renderDT(timeseriesdat$tabledata,
                              rownames = FALSE,
                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
 
+####################################### UPSTREAM DOWNSTREAM SECTION ##########################
+
+# Things to include in menu
+# Date range
+# Dates to choose from
+output$usds_date <- renderUI({
+  req(workbook$Daily_Geomean_Data)
+  us_ds_data <- workbook$Daily_Geomean_Data
+  sliderInput("usdsdate",
+              label="Date Range",
+              min=min(us_ds_data$Date),
+              max=max(us_ds_data$Date),
+              value = c(min(us_ds_data$Date),max(us_ds_data$Date)),
+              dragRange = TRUE, timeFormat="%Y-%m-%d")
+})
+
+output$UD_Geomeans <- renderPlotly({
+  req(input$usdsdate)
+  geomeans <- workbook$Daily_Geomean_Data
+  selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
+  ranks <- workbook$Site_order
+  usds_data = merge(selgeomeans, ranks, all.x = TRUE)
+  usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
+  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(xaxis = list(title = "Site", font = "Arial, sans-serif"), yaxis = list(title = "E.coli Concentration (MPN/100 mL)", font = "Arial, sans-serif"), font = "Arial, sans-serif")
+})
 
 ###################################### MONTH TAB SECTION #####################################
 
