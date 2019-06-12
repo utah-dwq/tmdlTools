@@ -142,7 +142,9 @@ output$dwnloadbutton <- renderUI({
    }
    workbook$Ecoli_data = out$Ecoli_data
    workbook$Inputs = out$Inputs
-   workbook$Site_order = out$Site_order
+   if(!is.null(out$Site_order)){
+     workbook$Site_order = out$Site_order
+   }
    if(!is.null(out$Daily_Geomean_Data)){
      out$Daily_Geomean_Data$E.coli_Geomean = round(out$Daily_Geomean_Data$E.coli_Geomean,1)
      workbook$Daily_Geomean_Data = out$Daily_Geomean_Data
@@ -208,12 +210,20 @@ output$dwnloadbutton <- renderUI({
  })
 
 # Add loading tab if loadings present
-
   observe({
     if(!is.null(workbook$LDC_Data)){
       showTab(inputId="all_the_things", target = "Load Duration Curves")
     }else{
       hideTab(inputId="all_the_things", target = "Load Duration Curves")
+    }
+  })
+
+# Add upstream downstream tab if order present
+  observe({
+    if(!is.null(workbook$Site_order)){
+      showTab(inputId="all_the_things", target = "Upstream-Downstream")
+    }else{
+      hideTab(inputId="all_the_things", target = "Upstream-Downstream")
     }
   })
   

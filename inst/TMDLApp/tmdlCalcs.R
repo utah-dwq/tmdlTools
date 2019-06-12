@@ -56,8 +56,10 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   #irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
   
   ### Obtain site order from site_order sheet ###
-  site.order = readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
-  calcs$Site_order = site.order
+  if("Site_order"%in%wb.dat$sheet_names){
+    site.order = readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
+    calcs$Site_order = site.order
+  }
   
   # Load E.coli concentrations
   ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
