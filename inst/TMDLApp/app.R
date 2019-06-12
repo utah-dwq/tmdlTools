@@ -425,7 +425,8 @@ output$UD_Geomeans <- renderPlotly({
   print(udmed_pos)
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
   print(udn_count)
-  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"))
+  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"))%>%
+  add_annotations(x = usds_data$ML_Name, y = udmed_pos)
 })
 
 ###################################### MONTH TAB SECTION #####################################
