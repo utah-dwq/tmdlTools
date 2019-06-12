@@ -394,8 +394,8 @@ observe({
 })
 
 output$Time_Data <- renderDT(timeseriesdat$tabledata,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                             rownames = FALSE,selection='none',filter="top",
+                             options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
 ####################################### UPSTREAM DOWNSTREAM SECTION ##########################
 
@@ -597,8 +597,8 @@ observe({
 
 # Data table
 output$Monthly_Data <- renderDT(selectedmonthdata$table,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                                rownames = FALSE,selection='none',filter="top",
+                                options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
 
 ################################## REC TAB SECTION ##########################################
@@ -873,8 +873,8 @@ observe({
   recdat = recdat[order(recdat$Year),]
   # Data table
   output$Rec_Data <- renderDT(recdat,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
   
 })
 
@@ -1160,8 +1160,8 @@ observe({
   irgdat = irgdat[order(irgdat$Year),]
   # Data table
   output$Irg_Data <- renderDT(irgdat,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
   
 })
 
@@ -1250,8 +1250,8 @@ if(input$ldc_type == "Scatterplot"){
 })
 
 output$LDC_Data <- renderDT(workbook$LDC_Data,
-                            rownames = FALSE,
-                            options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                            rownames = FALSE,selection='none',filter="top",
+                            options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 }
 
 # Run the application
