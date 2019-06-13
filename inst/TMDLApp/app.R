@@ -47,7 +47,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
                             tabPanel("Upstream-Downstream",
                                      h3("Bacterial Concentrations Upstream to Downstream"),
-                                     h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations"),
+                                     h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations. The red dotted line in the boxplot represents the maximum",em("E.coli"), "concentration criterion, while the orange dotted line represents the geometric mean criterion."),
                                      sidebarPanel(uiOutput("usds_date")),
                                      mainPanel(plotlyOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
@@ -419,11 +419,19 @@ output$UD_Geomeans <- renderPlotly({
   usds_data = merge(selgeomeans, ranks, all.x = TRUE)
   usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
   udmed_pos = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, median)
-  udmed_pos = udmed_pos+0.1*max(udmed_pos)
+  udmed_pos = udmed_pos+0.05*max(udmed_pos)
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
-  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"))%>%
-  add_annotations(x = 0:(length(udmed_pos)-1), y = udmed_pos, text = paste("n =",udn_count), showarrow = FALSE, font = list(color = "white"))
-})
+  
+  # initiate a line shape object
+  geom = list(type = 'line', x0 = -1, x1 = length(udmed_pos), y0 = crits$geomcrit, y1 = crits$geomcrit, line=list(dash='dot', color = "orange", width=2))
+  max = list(type = 'line', x0 = -1, x1 = length(udmed_pos), y0 = crits$maxcrit, y1 = crits$maxcrit, line=list(dash='dot', color = "red", width=2))
+  
+  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box", boxpoints = "all", jitter = 0.3,
+                 pointpos = -1.8)%>%
+    layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), shapes = list(max, geom))%>%
+    add_annotations(x = 0:(length(udmed_pos)-1), y = udmed_pos, text = paste("n =",udn_count), showarrow = FALSE, font = list(color = "white"))
+  
+  })
 
 ###################################### MONTH TAB SECTION #####################################
 
