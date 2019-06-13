@@ -9,12 +9,12 @@ require(reshape2)
 require(markdown)
 require(dplyr)
 require(plyr)
+require(plotly)
 
 source("tmdlCalcs.R")
 
 perc.red <- function(x,y){100-x/y*100}
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(title="E.coli Data Explorer",
                 titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
                 tabsetPanel(id="all_the_things",
@@ -26,12 +26,10 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   uiOutput("loadcalcs"),
                                                   uiOutput("selectsheet"),
                                                   uiOutput("dwnloadbutton")),
-                                     mainPanel(
-                                       tabsetPanel(
-                                         tabPanel("Data View", DTOutput("datview"), style= "font-size:75%"),
-                                         tabPanel("Check Inputs", DTOutput("inputdat"), style= "font-size:75%")
-                                       )
-                                     )),
+                                     mainPanel(h4("Data View"),
+                                               h5("Toggle between sheets in the workbook using the drop down menu at the bottom of the sidebar."),
+                                               DTOutput("datview"), style= "font-size:75%")
+                                     ),
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
                                      h3("Bacterial Concentrations Over Time by Site"),
@@ -47,6 +45,11 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
+                            tabPanel("Upstream-Downstream",
+                                     h3("Bacterial Concentrations Upstream to Downstream"),
+                                     h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations. The red dotted line in the boxplot represents the maximum",em("E.coli"), "concentration criterion, while the orange dotted line represents the geometric mean criterion."),
+                                     sidebarPanel(uiOutput("usds_date")),
+                                     mainPanel(plotlyOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
                                      sidebarPanel(uiOutput("monthsite"),
@@ -104,6 +107,7 @@ server <- function(input, output) {
 
 # File Info
   workbook <- reactiveValues()
+  snames <- reactiveValues()
 # Obtain file path
   observeEvent(input$workbook,{
     fileup = input$workbook
@@ -119,16 +123,6 @@ server <- function(input, output) {
    disable("loadcalcs")
  })
 
-# Create drop down menu of sheets contained in xlsx file
-
- output$selectsheet <- renderUI({
-   req(workbook$Inputs)
-   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c("Raw Concentrations"="Ecoli_data","Flow"="Flow_data",
-                                                                                          "Daily Geomean Concentrations" = "Daily_Geomean_Data", "Loadings"="LDC_Data",
-                                                                                          "Monthly Geomeans" = "Monthly_Data", "Rec/Non-Rec Geomeans"= "Rec_Season_Data",
-                                                                                          "Irrigation/Non-Irrigation Geomeans"="Irg_Season_Data"))
- })
-
 # Download button that shows after sheet widget
 output$dwnloadbutton <- renderUI({
   req(input$selectsheet)
@@ -141,17 +135,16 @@ output$dwnloadbutton <- renderUI({
    if(input$loadcalcs=="Yes"){
      out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
    }else{
-       dat = openxlsx::loadWorkbook(workbook$wb_path)
-       sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
-       out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
-       names(out) = sheets
+     dat = openxlsx::loadWorkbook(workbook$wb_path)
+     sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
+     out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
+     names(out) = sheets
    }
-   # convertds = out$Inputs$Value[out$Inputs$Parameter=="Rec Season Start"|out$Inputs$Parameter=="Rec Season End"|out$Inputs$Parameter=="Irrigation Season Start"|out$Inputs$Parameter=="Irrigation Season End"]
-   # convertds1 = as.Date(convertds, origin = "1899-12-30")
-   # convertds1 = format(convertds1, "%b-%d")
-   # out$Inputs[out$Inputs$Value%in%convertds,"Value"] = convertds1
    workbook$Ecoli_data = out$Ecoli_data
    workbook$Inputs = out$Inputs
+   if(!is.null(out$Site_order)){
+     workbook$Site_order = out$Site_order
+   }
    if(!is.null(out$Daily_Geomean_Data)){
      out$Daily_Geomean_Data$E.coli_Geomean = round(out$Daily_Geomean_Data$E.coli_Geomean,1)
      workbook$Daily_Geomean_Data = out$Daily_Geomean_Data
@@ -169,8 +162,16 @@ output$dwnloadbutton <- renderUI({
        workbook$LDC_Data = ldc
      }
    }
+   snames$sheets = names(workbook)[!names(workbook)=="wb_path"]
  })
 
+ # Create drop down menu of sheets contained in xlsx file
+ 
+ output$selectsheet <- renderUI({
+   req(workbook$Inputs)
+   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c(snames$sheets))
+ })
+ 
  # Object to be fed to the download handler
  wbdwn <- reactiveValues()
 
@@ -203,23 +204,26 @@ output$dwnloadbutton <- renderUI({
 
    # Load data tables on first page
    output$datview <- renderDT(tableview,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '600px', paging = FALSE, scrollX=TRUE))
 
  })
 
-  output$inputdat <- renderDT(workbook$Inputs,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
-
-
 # Add loading tab if loadings present
-
   observe({
     if(!is.null(workbook$LDC_Data)){
       showTab(inputId="all_the_things", target = "Load Duration Curves")
     }else{
       hideTab(inputId="all_the_things", target = "Load Duration Curves")
+    }
+  })
+
+# Add upstream downstream tab if order present
+  observe({
+    if(!is.null(workbook$Site_order)){
+      showTab(inputId="all_the_things", target = "Upstream-Downstream")
+    }else{
+      hideTab(inputId="all_the_things", target = "Upstream-Downstream")
     }
   })
   
@@ -390,9 +394,44 @@ observe({
 })
 
 output$Time_Data <- renderDT(timeseriesdat$tabledata,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                             rownames = FALSE,selection='none',filter="top",
+                             options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
+####################################### UPSTREAM DOWNSTREAM SECTION ##########################
+
+# Dates to choose from
+output$usds_date <- renderUI({
+  req(workbook$Daily_Geomean_Data)
+  us_ds_data <- workbook$Daily_Geomean_Data
+  sliderInput("usdsdate",
+              label="Date Range",
+              min=min(us_ds_data$Date),
+              max=max(us_ds_data$Date),
+              value = c(min(us_ds_data$Date),max(us_ds_data$Date)),
+              dragRange = TRUE, timeFormat="%Y-%m-%d")
+})
+
+output$UD_Geomeans <- renderPlotly({
+  req(input$usdsdate)
+  geomeans <- workbook$Daily_Geomean_Data
+  selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
+  ranks <- workbook$Site_order
+  usds_data = merge(selgeomeans, ranks, all.x = TRUE)
+  usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
+  udmed_pos = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, median)
+  udmed_pos = udmed_pos+0.05*max(udmed_pos)
+  udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
+  
+  # initiate a line shape object
+  geom = list(type = 'line', x0 = -1, x1 = length(udmed_pos), y0 = crits$geomcrit, y1 = crits$geomcrit, line=list(dash='dot', color = "orange", width=2))
+  max = list(type = 'line', x0 = -1, x1 = length(udmed_pos), y0 = crits$maxcrit, y1 = crits$maxcrit, line=list(dash='dot', color = "red", width=2))
+  
+  usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box", boxpoints = "all", jitter = 0.3,
+                 pointpos = -1.8)%>%
+    layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), shapes = list(max, geom))%>%
+    add_annotations(x = 0:(length(udmed_pos)-1), y = udmed_pos, text = paste("n =",udn_count), showarrow = FALSE, font = list(color = "white"))
+  
+  })
 
 ###################################### MONTH TAB SECTION #####################################
 
@@ -568,8 +607,8 @@ observe({
 
 # Data table
 output$Monthly_Data <- renderDT(selectedmonthdata$table,
-                             rownames = FALSE,
-                             options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                                rownames = FALSE,selection='none',filter="top",
+                                options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
 
 ################################## REC TAB SECTION ##########################################
@@ -844,8 +883,8 @@ observe({
   recdat = recdat[order(recdat$Year),]
   # Data table
   output$Rec_Data <- renderDT(recdat,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
   
 })
 
@@ -1131,8 +1170,8 @@ observe({
   irgdat = irgdat[order(irgdat$Year),]
   # Data table
   output$Irg_Data <- renderDT(irgdat,
-                              rownames = FALSE,
-                              options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                              rownames = FALSE,selection='none',filter="top",
+                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
   
 })
 
@@ -1221,8 +1260,8 @@ if(input$ldc_type == "Scatterplot"){
 })
 
 output$LDC_Data <- renderDT(workbook$LDC_Data,
-                            rownames = FALSE,
-                            options = list(dom="ft", paging = FALSE, scrollX=TRUE, scrollY = "300px"))
+                            rownames = FALSE,selection='none',filter="top",
+                            options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 }
 
 # Run the application

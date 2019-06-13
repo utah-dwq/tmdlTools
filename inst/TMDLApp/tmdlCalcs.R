@@ -36,8 +36,32 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   perc.red <- function(x,y){100-x/y*100} # percent reduction equation where x = capacity and y = observed
   flow_perc <- function(x){(1-percent_rank(x))*100} # gives each flow measurement a percent rank (what percentage of flows are higher than value?)
   
-  ### Load the dataset from the workbook and convert to dates ###
+  ### Load the dataset from the workbook ###
   wb.dat <- openxlsx::loadWorkbook(wb_path)
+  
+  ### Obtain criteria from specs.dat sheet or function inputs ###
+  if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
+  specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
+  
+  # Add to list
+  calcs$Inputs <- specs.dat
+  
+  geom_crit = specs.dat[specs.dat$Parameter=="Geometric Mean Criterion","Value"]
+  max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
+  cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
+  mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
+  rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
+  irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
+  #rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
+  #irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
+  
+  ### Obtain site order from site_order sheet ###
+  if("Site_order"%in%wb.dat$sheet_names){
+    site.order = readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
+    calcs$Site_order = site.order
+  }
+  
+  # Load E.coli concentrations
   ecoli.dat <- openxlsx::readWorkbook(wb.dat,sheet="Ecoli_data",startRow=1)
   ecoli.dat$Date <- as.Date(ecoli.dat$Date, origin="1899-12-30")
   
@@ -50,23 +74,6 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     flo.dat = TRUE
   }else{flo.dat=FALSE}
 
-  
-  ### Obtain criteria from specs.dat sheet or function inputs ###
-  if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
-    specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
-    
-    # Add to list
-    calcs$Inputs <- specs.dat
-    
-    geom_crit = specs.dat[specs.dat$Parameter=="Geometric Mean Criterion","Value"]
-    max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
-    cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
-    mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
-    rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
-    irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
-    #rec_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"]), origin = "1899-12-30")
-    #irg_ssn = as.Date(c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"]), origin = "1899-12-30")
-    
   ### Convert any "<" to min and max detection limits
   ecoli.dat$E.coli=gsub("<1",1,ecoli.dat$E.coli)
   ecoli.dat$E.coli=gsub(">2419.6",2420,ecoli.dat$E.coli)
