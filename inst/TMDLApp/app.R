@@ -399,8 +399,6 @@ output$Time_Data <- renderDT(timeseriesdat$tabledata,
 
 ####################################### UPSTREAM DOWNSTREAM SECTION ##########################
 
-# Things to include in menu
-# Date range
 # Dates to choose from
 output$usds_date <- renderUI({
   req(workbook$Daily_Geomean_Data)
@@ -421,12 +419,10 @@ output$UD_Geomeans <- renderPlotly({
   usds_data = merge(selgeomeans, ranks, all.x = TRUE)
   usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
   udmed_pos = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, median)
-  udmed_pos = udmed_pos*1.1
-  print(udmed_pos)
+  udmed_pos = udmed_pos+0.1*max(udmed_pos)
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
-  print(udn_count)
   usds = plot_ly(usds_data, x= ~ML_Name, y = ~E.coli_Geomean, type = "box")%>%layout(yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"))%>%
-  add_annotations(x = usds_data$ML_Name, y = udmed_pos)
+  add_annotations(x = 0:(length(udmed_pos)-1), y = udmed_pos, text = paste("n =",udn_count), showarrow = FALSE, font = list(color = "white"))
 })
 
 ###################################### MONTH TAB SECTION #####################################
