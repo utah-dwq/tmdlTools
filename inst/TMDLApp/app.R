@@ -58,7 +58,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   br(),
                                                   uiOutput("mon_unit_type"),
                                                   checkboxInput("mon_medplot", label = strong("View Medians and Quartiles"))),
-                                     mainPanel(plotOutput("Monthly_Geomeans", height="700px"),
+                                     mainPanel(plotlyOutput("Monthly_Geomeans", height="700px"),
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Monthly_Data"), style= "font-size:75%"))),
@@ -477,6 +477,7 @@ observe({
   dailygeomeans <- workbook$Daily_Geomean_Data
   seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>=input$mondatrange[1]&dailygeomeans$Date<=input$mondatrange[2],]
   seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
+  seldailygeomeans <<- seldailygeomeans
   selectedmonthdata$seldg = seldailygeomeans
   aggseldg0 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
   aggseldg1 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=length)
@@ -484,110 +485,209 @@ observe({
   aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
   aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
   selectedmonthdata$aggseldg = aggseldg
+  aggseldg <<- aggseldg
 
 })
 
-output$Monthly_Geomeans <- renderPlot({
-  req(selectedmonthdata$aggseldg)
-  barcolors = piratepal(palette="up")
+observe({
+  req(selectedmonthdata$seldg)
   if(input$mon_unit_type=="Concentration"){
-    x = selectedmonthdata$aggseldg
-    x = droplevels(x[order(x$month),])
-    # Straight bar plot - concentrations
-    uplim = max(x$E.coli_Geomean)*1.2
-    mo_conc.p <- x$E.coli_Geomean
-    barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
-    legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
-    box(bty="l")
-    abline(h=crits$geomcrit, col="black", lwd=2)
-    ncount = paste0("n=",x$Ncount)
-    mtext(ncount, side = 1, line = 0, cex=0.8, at = barp)
-    barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
-    barperc <- barperc[barperc$X3>0,]
-    if(dim(barperc)[1]>0){
-      barperc$X4 <- paste(barperc$X3,"%",sep="")
-      text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1)
-    }
-    if(input$mon_medplot){
-      # Obtain boxplot stats from loading data
-      y = selectedmonthdata$seldg
-      y = droplevels(y[order(y$month),])
-
-      # Get axes right to accommodate boxplot overlay (if checkbox checked)
-      uplim1 = quantile(y$E.coli_Geomean,1)
-      uplim1 = max(uplim, uplim1)
-
-      # Bar plot
-      barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$month, ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
-      abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
-      legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
-      box(bty="l")
-      mtext(ncount, side = 1, line = 0, cex = 0.8, at = barp)
-
-      # x-axis arguments for boxplot based on barplot placement
-
-      boxplot(y$E.coli_Geomean~y$month,
-              lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
-    }
-  }
-  if(input$mon_unit_type=="Loading"){
-    cols = piratepal(palette="up")
-    # Narrow dataset
-    monthdatl <- workbook$LDC_Data
-    datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>=input$mondatrange[1]&monthdatl$Date<=input$mondatrange[2],c("MLID","ML_Name","Date","TMDL","Observed_Loading")]
-    if(dim(datrange)[1]>0){
-      datrange <- datrange[!is.na(datrange$Observed_Loading),]
-      datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("TMDL","Observed_Loading"), variable.name = "Meas_Type")
-      datstack$month = lubridate::month(datstack$Date, label=TRUE)
-      datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
-      names(datstack)[names(datstack)=="value"]<-"Loading"
-      x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
-      x_ncount <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=length)
-      x_ncount <- x_ncount[x_ncount$Meas_Type=="Observed_Loading",]
-      names(x_ncount)[names(x_ncount)=="Loading"]<- "Ncount"
-      x_ncount = x_ncount[order(x_ncount$month),]
-      x = dcast(data=x, month~Meas_Type, value.var="Loading")
-      x = x[order(x$month),]
-      x$Percent_Reduction = ifelse(x$Observed_Loading>x$TMDL,round(perc.red(x$TMDL,x$Observed_Loading), digits=0),0)
-      uplim = max(c(x$Observed_Loading,x$TMDL))*1.2
-      mo_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL")]
-
-      # Straight bar plots
-      barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
-      legend("topright",legend=c("Observed Loading","TMDL", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
-      box(bty="l")
-      barps <- barp[1,]
-      barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
-      barperc <- barperc[barperc$V3>0,]
-      if(dim(barperc)[1]>0){
-        barperc$V3 <- paste(barperc$V3,"%",sep="")
-        text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
+    
+    y = selectedmonthdata$seldg
+    y = droplevels(y[order(y$month),])
+    monthmed = tapply(y$E.coli_Geomean, y$month, median)
+    monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
+    monthn_count = tapply(y$E.coli_Geomean, y$month, length)
+    month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
+    perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+    
+    output$Monthly_Geomeans <- renderPlotly({
+      # Add criteria
+      geom = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$geomcrit, y1 = crits$geomcrit, line=list(dash='dot', color = "orange", width=2))
+      max = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$maxcrit, y1 = crits$maxcrit, line=list(dash='dot', color = "red", width=2))
+      
+      # initiate a line shape object
+      line <- list(
+        type = "line",
+        line = list(color = "green"),
+        xref = "x",
+        yref = "y"
+      )
+      
+      lines <- list()
+      for (i in c(0:(length(monthmed_pos)-1))) {
+        line[["x0"]] <- i-0.25
+        line[["x1"]] <- i + 0.25
+        line[c("y0", "y1")] <- month_geomean[i+1]
+        lines <- c(lines, list(line))
       }
       
-      # Add ncounts
-      ncountpos = colMeans(barp)
-      mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
-
-      if(input$mon_medplot){
-        # Get axes right to accommodate boxplot overlay (if checkbox checked)
-        uplim1 = quantile(datstack$Loading,1)
-        uplim1 = max(uplim, uplim1)
-
-        # Bar plot
-        barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
-        legend("topright",legend=c("Observed Loading","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
-        box(bty="l")
-        mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
-        # x-axis arguments for boxplot based on barplot placement
-        ax <- c(barp[1,],barp[2,])
-        ax_spots = ax[order(ax)]
-
-        boxplot(datstack$Loading~datstack$Meas_Type+lubridate::month(datstack$Date),
-                lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(cols[1],cols[2]),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
-      }
-    }
-  }
+      line[["x0"]] <- -1
+      line[["x1"]] <- length(monthmed_pos)
+      line[c("y0", "y1")] <- crits$geomcrit
+      line$line$color = "orange"
+      lines <- c(lines, list(line))
+      
+      line[["x0"]] <- -1
+      line[["x1"]] <- length(monthmed_pos)
+      line[c("y0", "y1")] <- crits$maxcrit
+      line$line$color = "red"
+      lines <- c(lines, list(line))
+      
+      # add = selectedmonthdata$aggseldg
+      # add = droplevels(add[order(add$month),])
+      #barcolors = piratepal(palette="up")
+        month_c = plot_ly(x =~y$month, y =~y$E.coli_Geomean,  type ="box", boxpoints = "outliers")%>%
+          layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), shapes = lines)%>%
+          add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)
+        
+  })}
 })
+
+# output$Monthly_Geomeans <- renderPlotly({
+#   req(selectedmonthdata$seldg)
+#   y = selectedmonthdata$seldg
+#   y = droplevels(y[order(y$month),])
+#   monthmed = tapply(y$E.coli_Geomean, y$month, median)
+#   monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
+#   monthn_count = tapply(y$E.coli_Geomean, y$month, length)
+#   month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
+#   perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+#   # Add criteria
+#   geom = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$geomcrit, y1 = crits$geomcrit, line=list(dash='dot', color = "orange", width=2))
+#   max = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$maxcrit, y1 = crits$maxcrit, line=list(dash='dot', color = "red", width=2))
+#   
+#   # initiate a line shape object
+#   line <- list(
+#     type = "line",
+#     line = list(color = "green"),
+#     xref = "x",
+#     yref = "y"
+#   )
+#   
+#   lines <- list()
+#   for (i in c(0:(length(monthmed_pos)-1))) {
+#     line[["x0"]] <- i-0.25
+#     line[["x1"]] <- i + 0.25
+#     line[c("y0", "y1")] <- month_geomean[i+1]
+#     lines <- c(lines, list(line))
+#   }
+#   
+#   line[["x0"]] <- -1
+#   line[["x1"]] <- length(monthmed_pos)
+#   line[c("y0", "y1")] <- crits$geomcrit
+#   line$line$color = "orange"
+#   lines <- c(lines, list(line))
+# 
+#   line[["x0"]] <- -1
+#   line[["x1"]] <- length(monthmed_pos)
+#   line[c("y0", "y1")] <- crits$maxcrit
+#   line$line$color = "red"
+#   lines <- c(lines, list(line))
+#   
+#   # add = selectedmonthdata$aggseldg
+#   # add = droplevels(add[order(add$month),])
+#   #barcolors = piratepal(palette="up")
+#   if(input$mon_unit_type=="Concentration"){
+#     month_c = plot_ly(x =~y$month, y =~y$E.coli_Geomean,  type ="box", boxpoints = "outliers")%>%
+#       layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), shapes = lines)%>%
+#       add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)
+#     month_c
+#       # # Straight bar plot - concentrations
+#     # uplim = max(x$E.coli_Geomean)*1.2
+#     # mo_conc.p <- x$E.coli_Geomean
+#     # barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
+#     # legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
+#     # box(bty="l")
+#     # abline(h=crits$geomcrit, col="black", lwd=2)
+#     # ncount = paste0("n=",x$Ncount)
+#     # mtext(ncount, side = 1, line = 0, cex=0.8, at = barp)
+#     # barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
+#     # barperc <- barperc[barperc$X3>0,]
+#     # if(dim(barperc)[1]>0){
+#     #   barperc$X4 <- paste(barperc$X3,"%",sep="")
+#     #   text(barperc$X1,barperc$X2+0.1*mean(barperc$X2),labels=barperc$X4,cex=1)
+#     # }
+#     # if(input$mon_medplot){
+#     #   # Obtain boxplot stats from loading data
+#     #   y = selectedmonthdata$seldg
+#     #   y = droplevels(y[order(y$month),])
+#     # 
+#     #   # Get axes right to accommodate boxplot overlay (if checkbox checked)
+#     #   uplim1 = quantile(y$E.coli_Geomean,1)
+#     #   uplim1 = max(uplim, uplim1)
+#     # 
+#     #   # Bar plot
+#     #   barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans with Quartile Overlay", ylim=c(0, uplim1), names.arg = x$month, ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
+#     #   abline(h=crits$geomcrit, col="black", lty=2, lwd=2)
+#     #   legend("topright",legend=c("Median", "Geomean Standard","Outliers"), bty="n", pch=c(NA,NA,1),fill=c(NA,NA,"white"),border=c("white","white","white"),lty=c(1,2,NA),lwd=c(3,2,NA),cex=1)
+#     #   box(bty="l")
+#     #   mtext(ncount, side = 1, line = 0, cex = 0.8, at = barp)
+#     # 
+#     #   # x-axis arguments for boxplot based on barplot placement
+#     # 
+#     #   boxplot(y$E.coli_Geomean~y$month,
+#     #           lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
+#     # }
+#   }
+#   if(input$mon_unit_type=="Loading"){
+#     cols = piratepal(palette="up")
+#     # Narrow dataset
+#     monthdatl <- workbook$LDC_Data
+#     datrange <- monthdatl[monthdatl$ML_Name==input$monthsite&monthdatl$Date>=input$mondatrange[1]&monthdatl$Date<=input$mondatrange[2],c("MLID","ML_Name","Date","TMDL","Observed_Loading")]
+#     if(dim(datrange)[1]>0){
+#       datrange <- datrange[!is.na(datrange$Observed_Loading),]
+#       datstack <- reshape2::melt(data = datrange, id.vars = c("MLID", "ML_Name", "Date"), value.vars=c("TMDL","Observed_Loading"), variable.name = "Meas_Type")
+#       datstack$month = lubridate::month(datstack$Date, label=TRUE)
+#       datstack$Meas_Type = factor(datstack$Meas_Type, levels = levels(datstack$Meas_Type)[c(2,1)])
+#       names(datstack)[names(datstack)=="value"]<-"Loading"
+#       x <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=function(x){exp(mean(log(x)))})
+#       x_ncount <- aggregate(Loading~month+MLID+ML_Name+Meas_Type, dat=datstack, FUN=length)
+#       x_ncount <- x_ncount[x_ncount$Meas_Type=="Observed_Loading",]
+#       names(x_ncount)[names(x_ncount)=="Loading"]<- "Ncount"
+#       x_ncount = x_ncount[order(x_ncount$month),]
+#       x = dcast(data=x, month~Meas_Type, value.var="Loading")
+#       x = x[order(x$month),]
+#       x$Percent_Reduction = ifelse(x$Observed_Loading>x$TMDL,round(perc.red(x$TMDL,x$Observed_Loading), digits=0),0)
+#       uplim = max(c(x$Observed_Loading,x$TMDL))*1.2
+#       mo_load.p <- x[,names(x)%in%c("Observed_Loading","TMDL")]
+# 
+#       # Straight bar plots
+#       barp <- barplot(t(mo_load.p), beside=T, main = "Monthly E.coli Loading Geomeans",names.arg=x$month, ylim=c(0, uplim), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
+#       legend("topright",legend=c("Observed Loading","TMDL", "% Reduction Needed"), bty="n", fill=c(cols[1],cols[2],"white"), border=c("black","black","white"),cex=1)
+#       box(bty="l")
+#       barps <- barp[1,]
+#       barperc <- data.frame(cbind(barps,x$Observed_Loading, x$Percent_Reduction))
+#       barperc <- barperc[barperc$V3>0,]
+#       if(dim(barperc)[1]>0){
+#         barperc$V3 <- paste(barperc$V3,"%",sep="")
+#         text(barperc$barps,barperc$V2+0.1*mean(barperc$V2),labels=barperc$V3,cex=1)
+#       }
+#       
+#       # Add ncounts
+#       ncountpos = colMeans(barp)
+#       mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
+# 
+#       if(input$mon_medplot){
+#         # Get axes right to accommodate boxplot overlay (if checkbox checked)
+#         uplim1 = quantile(datstack$Loading,1)
+#         uplim1 = max(uplim, uplim1)
+# 
+#         # Bar plot
+#         barp <- barplot(t(mo_load.p), beside=T, names.arg = x$month, main = "Monthly E.coli Loading Geomeans with Quartile Overlay", ylim=c(0, uplim1*1.1), ylab="E.coli Loading (GigaMPN/day)",col=c(cols[1],cols[2]))
+#         legend("topright",legend=c("Observed Loading","TMDL", "Median","Outliers"), bty="n", pch=c(NA,NA,NA,1),fill=c(cols[1],cols[2],NA,"white"),border=c("black","black","white","white"),lty=c(NA,NA,1,NA),lwd=c(NA,NA,3,NA),cex=1)
+#         box(bty="l")
+#         mtext(c(paste0("n=",x_ncount$Ncount)),side = 1,line = 0,at = ncountpos, cex=0.8)
+#         # x-axis arguments for boxplot based on barplot placement
+#         ax <- c(barp[1,],barp[2,])
+#         ax_spots = ax[order(ax)]
+# 
+#         boxplot(datstack$Loading~datstack$Meas_Type+lubridate::month(datstack$Date),
+#                 lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(c(cols[1],cols[2]),0.1), boxwex = 0.7, at=ax_spots, add=TRUE)
+#       }
+#     }
+#   }
+# })
 
 # Observer to identify which data to show....
 observe({
