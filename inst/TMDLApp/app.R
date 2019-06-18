@@ -55,9 +55,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      sidebarPanel(uiOutput("monthsite"),
                                                   div(id="date1",uiOutput("mondatrange")),
                                                   br(),
-                                                  br(),
-                                                  uiOutput("mon_unit_type"),
-                                                  checkboxInput("mon_medplot", label = strong("View Medians and Quartiles"))),
+                                                  uiOutput("mon_unit_type")),
                                      mainPanel(plotlyOutput("Monthly_Geomeans", height="700px"),
                                                hr(),
                                                br(),
@@ -509,7 +507,7 @@ observe({
       # initiate a line shape object
       line <- list(
         type = "line",
-        line = list(color = "green"),
+        line = list(color = "gold"),
         xref = "x",
         yref = "y"
       )
@@ -525,13 +523,15 @@ observe({
       line[["x0"]] <- -1
       line[["x1"]] <- length(monthmed_pos)
       line[c("y0", "y1")] <- crits$geomcrit
-      line$line$color = "orange"
+      line$line$color = "green"
+      line$line$dash = "dot"
       lines <- c(lines, list(line))
       
       line[["x0"]] <- -1
       line[["x1"]] <- length(monthmed_pos)
       line[c("y0", "y1")] <- crits$maxcrit
       line$line$color = "red"
+      line$line$dash = "dot"
       lines <- c(lines, list(line))
       
       # add = selectedmonthdata$aggseldg
