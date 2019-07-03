@@ -436,22 +436,19 @@ output$UD_Geomeans <- renderPlotly({
 # Sites to choose from
 output$monthsite <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  #monthsites <- workbook$Monthly_Data
-  monthsites = unique(workbook$Monthly_Data$ML_Name)
   selectInput("monthsite",
               label = "Site Name",
-              choices=monthsites)
+              choices=unique(workbook$Daily_Geomean_Data$ML_Name))
 })
 
 # Dates to choose from
 output$mondatrange <- renderUI({
   req(workbook$Daily_Geomean_Data)
-  monthdata <- workbook$Daily_Geomean_Data
   sliderInput("mondatrange",
               label="Date Range",
-              min=min(monthdata$Date),
-              max=max(monthdata$Date),
-              value = c(min(monthdata$Date),max(monthdata$Date)),
+              min=min(workbook$Daily_Geomean_Data$Date),
+              max=max(workbook$Daily_Geomean_Data$Date),
+              value = c(min(workbook$Daily_Geomean_Data$Date),max(workbook$Daily_Geomean_Data$Date)),
               dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
 
@@ -472,6 +469,7 @@ selectedmonthdata <- reactiveValues()
 observe({
   req(input$monthsite)
   req(input$mondatrange)
+  req(input$mon_unit_type)
   dailygeomeans <- workbook$Daily_Geomean_Data
   seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>=input$mondatrange[1]&dailygeomeans$Date<=input$mondatrange[2],]
   seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
@@ -482,6 +480,28 @@ observe({
   aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
   aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
   selectedmonthdata$aggseldg = aggseldg
+  
+  if(input$mon_unit_type == "Loading"){
+    mon_loadings = workbook$LDC_Data
+    mon_loads <- mon_loadings[mon_loadings$ML_Name==input$monthsite&mon_loadings$Date>=input$mondatrange[1]&mon_loadings$Date<=input$mondatrange[2],]
+    mon_loads$month = lubridate::month(mon_loads$Date, label=TRUE)
+    
+    ol = mon_loads[!is.na(mon_loads$Observed_Loading),]
+    ol_gmeans = aggregate(mon_loads$Observed_Loading~mon_loads$month, FUN = function(x){exp(mean(log(x)))})
+    
+    tmdlgeomeans = aggregate(mon_loads$TMDL~mon_loads$month, FUN = function(x){exp(mean(log(x)))})
+    
+    #For plotly boxplots
+    monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
+    monloads_flat = monloads_flat[!is.na(monloads_flat$Loading),]
+    
+    selectedmonthdata$monloads_flat = monloads_flat
+    
+    mloadmed = aggregate(Observed_Loading~month, dat = mon_loads, FUN = median)
+    monthload_pos = rep(max(mloadmed$Loading)*-0.05, length(mloadmed$Loading))
+    mloadcount = aggregate(Loading~Load_Type+month,dat = monloads_flat, FUN = length)
+    mloadgeomean = aggregate(Loading~Load_Type+month, monloads_flat, FUN = function(x){exp(mean(log(x)))})
+  }
 })
 
 observe({
@@ -500,20 +520,31 @@ observe({
     
     output$Monthly_Geomeans <- renderPlotly({
         month_c = plot_ly(x =~y$month, y =~y$E.coli_Geomean,  type ="box", name = "Monthly Concentrations",boxpoints = "outliers")%>%
-          add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
+          #add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
           layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), xaxis2 = list(overlaying = "x", showticklabels = FALSE, showline = FALSE))%>%
           add_trace(x = ~c(0,1), y = ~c(crits$maxcrit, crits$maxcrit), type = "scatter", mode = "lines", name = "Max Crit", xaxis = "x2", line = list(color = "green", dash = "dot"))%>%
-          add_trace(x = ~c(0,1), y = ~c(crits$geomcrit, crits$geomcrit), type = "scatter", mode = "lines", name = "Geomean Crit", xaxis = "x2", line = list(color = "red", dash = "dot"))%>%
-          add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)%>%
-          add_annotations(x = perc_red_df$xpos, y = perc_red_df$ypos, text = paste0(perc_red_df$perc_red,"%"), showarrow = FALSE, font = list(size = 9))
+          add_trace(x = ~c(0,1), y = ~c(crits$geomcrit, crits$geomcrit), type = "scatter", mode = "lines", name = "Geomean Crit", xaxis = "x2", line = list(color = "red", dash = "dot")) #%>%
+          #add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)%>%
+          #add_annotations(x = perc_red_df$xpos, y = perc_red_df$ypos, text = paste0(perc_red_df$perc_red,"%"), showarrow = FALSE, font = list(size = 9))
           
     })}
   if(input$mon_unit_type=="Loading"){
-    mon_loadings = workbook$LDC_Data
-    mon_loads <- mon_loadings[mon_loadings$ML_Name==input$monthsite&mon_loadings$Date>=input$mondatrange[1]&mon_loadings$Date<=input$mondatrange[2],]
-    mon_loads$month = lubridate::month(mon_loads$Date, label=TRUE)
-    monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
-    print(monloads_flat)
+
+    # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+    # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
+    # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
+    
+    
+    output$Monthly_Geomeans <- renderPlotly({
+      req(selectedmonthdata$monloads_flat)
+      monloads_flat = selectedmonthdata$monloads_flat
+      month_l = plot_ly(x =~monloads_flat$month, y =~monloads_flat$Loading,  color = ~monloads_flat$Load_Type, type ="box", boxpoints = "outliers")%>%
+      layout(boxmode = "group", xaxis = list(title = ""), yaxis = list(title = "E.coli Loading (GigaMPN/day)"),font = list(family = "Arial, sans-serif"), xaxis2 = list(overlaying = "x", showticklabels = FALSE, showline = FALSE)) #%>%
+      #add_trace(x = ~mloadgeomean$month, y = ~mloadgeomean$Loading, color = ~mloadgeomean$Load_Type, xaxis = "x2", line = list(color = "gold"))
+      #add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
+      #add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)%>%
+      #add_annotations(x = perc_red_df$xpos, y = perc_red_df$ypos, text = paste0(perc_red_df$perc_red,"%"), showarrow = FALSE, font = list(size = 9))
+    })
     
     
   }
