@@ -472,32 +472,57 @@ selectedmonthdata <- reactiveValues()
 
 observe({
   req(input$mon_unit_type)
-  dailygeomeans <- workbook$Daily_Geomean_Data
-  seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>=input$mondatrange[1]&dailygeomeans$Date<=input$mondatrange[2],]
-  seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
-  monthpositions_1 = data.frame("position" = 1:12, "month" = month.abb)
-  seldailygeomeans = merge(seldailygeomeans,monthpositions_1, all.x = TRUE)
-  selectedmonthdata$seldg = seldailygeomeans
-  
-  aggseldg0 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
-  aggseldg1 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=length)
-  names(aggseldg1)[names(aggseldg1)=="E.coli_Geomean"] <- "Ncount"
-  aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
-  aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
-  aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
-  print(aggseldg)
-  selectedmonthdata$aggseldg = aggseldg
-  
   if(input$mon_unit_type=="Concentration"){
-    table = selectedmonthdata$aggseldg
+    dailygeomeans <- workbook$Daily_Geomean_Data
+    seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>=input$mondatrange[1]&dailygeomeans$Date<=input$mondatrange[2],]
+    seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
+    monthpositions_1 = data.frame("position" = 1:12, "month" = month.abb)
+    seldailygeomeans = merge(seldailygeomeans,monthpositions_1, all.x = TRUE)
+    selectedmonthdata$seldg = seldailygeomeans
+    
+    aggseldg0 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
+    aggseldg1 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=length)
+    names(aggseldg1)[names(aggseldg1)=="E.coli_Geomean"] <- "Ncount"
+    aggseldg2 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=median)
+    names(aggseldg2)[names(aggseldg2)=="E.coli_Geomean"] <- "Median"
+    aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
+    aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
+    aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
+    aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
+    selectedmonthdata$aggseldg = aggseldg
+    table = aggseldg
     table = table[order(table$month),]
     selectedmonthdata$table = table
-  }else{
-    data <- workbook$LDC_Data
-    data1 <- data[data$ML_Name==input$monthsite&data$Date>=input$mondatrange[1]&data$Date<=input$mondatrange[2],]
-    data1$month = lubridate::month(data1$Date, label = TRUE, abbr = TRUE)
-    data1 = data1[order(data1$month),]
-    selectedmonthdata$table = data1
+    
+    # monthmed = tapply(y$E.coli_Geomean, y$month, median)
+    # monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
+    # monthn_count = tapply(y$E.coli_Geomean, y$month, length)
+    # month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
+    # month_geomean_df = data.frame(month = names(month_geomean), E.coli_Geomean = month_geomean)
+    # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+    # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
+    # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
+  }
+  if(input$mon_unit_type=="Loading"){
+    
+    # Isolate to site and period of interest
+    mon_loadings = workbook$LDC_Data
+    mon_loads <- mon_loadings[mon_loadings$ML_Name==input$monthsite&mon_loadings$Date>=input$mondatrange[1]&mon_loadings$Date<=input$mondatrange[2],]
+    mon_loads$month = lubridate::month(mon_loads$Date, label=TRUE)
+
+    # Flatten by loading type
+    monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
+    selectedmonthdata$monload_data = monloads_flat
+    selectedmonthdata$table = monloads_flat
+    
+    # Stats calcs
+    # mloadmed = aggregate(Observed_Loading~month, dat = mon_loads, FUN = median)
+    # monthload_pos = rep(max(mloadmed$Loading)*-0.05, length(mloadmed$Loading))
+    # mloadcount = aggregate(Loading~Load_Type+month,dat = monloads_flat, FUN = length)
+    # mloadgeomean = aggregate(Loading~Load_Type+month, monloads_flat, FUN = function(x){exp(mean(log(x)))})
+    # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+    # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
+    # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
   }
 })
 
@@ -506,41 +531,18 @@ output$Monthly_Geomeans <- renderPlot({
       if(input$mon_unit_type=="Concentration"){
         y = selectedmonthdata$seldg
         y = droplevels(y[order(y$month),])
-        monthmed = tapply(y$E.coli_Geomean, y$month, median)
-        monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
-        monthn_count = tapply(y$E.coli_Geomean, y$month, length)
-        month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
-        month_geomean_df = data.frame(month = names(month_geomean), E.coli_Geomean = month_geomean)
-        perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
-        perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
-        perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
-        
-        boxplot(y$E.coli_Geomean~y$month, ylab = "E.coli (MPN/100 mL)", col = "yellow")
+        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", col = "yellow")
         abline(h = crits$geomcrit, col = "green", lwd = 3, lty = 2)
         abline(h = crits$maxcrit, col = "orange", lwd = 3, lty = 2)
         
+        # add data points
         if(input$viewmondat){
           points(y$position, y$E.coli_Geomean, pch = 19, cex = 0.8, col = "red")
         }
       }
       if(input$mon_unit_type=="Loading"){
         
-        # Isolate to site and period of interest
-        mon_loadings = workbook$LDC_Data
-        mon_loads <- mon_loadings[mon_loadings$ML_Name==input$monthsite&mon_loadings$Date>=input$mondatrange[1]&mon_loadings$Date<=input$mondatrange[2],]
-        mon_loads$month = lubridate::month(mon_loads$Date, label=TRUE)
-        mon_loads <<- mon_loads
-        #For boxplots
-        monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
-        
-        # Stats calcs
-        # mloadmed = aggregate(Observed_Loading~month, dat = mon_loads, FUN = median)
-        # monthload_pos = rep(max(mloadmed$Loading)*-0.05, length(mloadmed$Loading))
-        # mloadcount = aggregate(Loading~Load_Type+month,dat = monloads_flat, FUN = length)
-        # mloadgeomean = aggregate(Loading~Load_Type+month, monloads_flat, FUN = function(x){exp(mean(log(x)))})
-        # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
-        # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
-        # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
+        monloads_flat = selectedmonthdata$monload_data
         
         # Get boxplot labels
         monlabs = sort(unique(monloads_flat$month))
@@ -551,6 +553,7 @@ output$Monthly_Geomeans <- renderPlot({
         
         repmons = data.frame("month" = rep(month.abb, each = 2), "position" = where, "Load_Type"= rep(c("TMDL","Observed_Loading"),12))
         
+        # data frame with all loading data and their positions 
         pointpos = merge(monloads_flat, repmons, all.x = TRUE)
         
         boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where,xaxt = "n", ylab = "Loading (MPN/day)", col = c("yellow", "orange"))
