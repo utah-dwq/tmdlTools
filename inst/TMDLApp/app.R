@@ -528,12 +528,13 @@ observe({
 
 output$Monthly_Geomeans <- renderPlot({
   req(selectedmonthdata$aggseldg)
+  boxcolors = piratepal(palette="up")
       if(input$mon_unit_type=="Concentration"){
         y = selectedmonthdata$seldg
         y = droplevels(y[order(y$month),])
-        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", col = "yellow")
+        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", col = boxcolors[1])
         abline(h = crits$geomcrit, col = "green", lwd = 3, lty = 2)
-        abline(h = crits$maxcrit, col = "orange", lwd = 3, lty = 2)
+        abline(h = crits$maxcrit, col = "red", lwd = 3, lty = 2)
         
         # add data points
         if(input$viewmondat){
@@ -556,7 +557,7 @@ output$Monthly_Geomeans <- renderPlot({
         # data frame with all loading data and their positions 
         pointpos = merge(monloads_flat, repmons, all.x = TRUE)
         
-        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where,xaxt = "n", ylab = "Loading (MPN/day)", col = c("yellow", "orange"))
+        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where,xaxt = "n", ylab = "Loading (MPN/day)", col = boxcolors[1:2])
         axis(side = 1, at = monlab_pos,labels = month.abb)
         
         if(input$viewmondat){
