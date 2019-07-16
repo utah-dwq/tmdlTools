@@ -381,20 +381,20 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
 })
 
 # What data to show in table
-observe({
-  req(workbook$Daily_Geomean_Data)
-  if(!is.null(timeseriesdat$x1)){
-    ecoli_ts = timeseriesdat$x
-    flow_ts = timeseriesdat$x1
-    timeseriesdat$tabledata = merge(ecoli_ts, flow_ts, all = TRUE)
-  }else{
-    timeseriesdat$tabledata = timeseriesdat$x
-  }
-})
-
-output$Time_Data <- renderDT(timeseriesdat$tabledata,
-                             rownames = FALSE,selection='none',filter="top",
-                             options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
+# observe({
+#   req(workbook$Daily_Geomean_Data)
+#   if(!is.null(timeseriesdat$x1)){
+#     ecoli_ts = timeseriesdat$x
+#     flow_ts = timeseriesdat$x1
+#     timeseriesdat$tabledata = merge(ecoli_ts, flow_ts, all = TRUE)
+#   }else{
+#     timeseriesdat$tabledata = timeseriesdat$x
+#   }
+# })
+# 
+# output$Time_Data <- renderDT(timeseriesdat$tabledata,
+#                              rownames = FALSE,selection='none',filter="top",
+#                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
 ####################################### UPSTREAM DOWNSTREAM SECTION ##########################
 
@@ -481,27 +481,26 @@ observe({
     selectedmonthdata$seldg = seldailygeomeans
     
     aggseldg0 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
+    aggseldg0$E.coli_Geomean = round(aggseldg0$E.coli_Geomean, digits = 1)
     aggseldg1 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=length)
     names(aggseldg1)[names(aggseldg1)=="E.coli_Geomean"] <- "Ncount"
     aggseldg2 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=median)
     names(aggseldg2)[names(aggseldg2)=="E.coli_Geomean"] <- "Median"
+    aggseldg2$Median = round(aggseldg2$Median, digits = 1)
     aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
     aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
     aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
     aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
     selectedmonthdata$aggseldg = aggseldg
-    table = aggseldg
+    table = aggseldg[,!names(aggseldg)%in%c("position","MLID","ML_Name")]
+    table = table[,c("month","Ncount","E.coli_Geomean","Median","Percent_Reduction")]
     table = table[order(table$month),]
-    selectedmonthdata$table = table
     
-    # monthmed = tapply(y$E.coli_Geomean, y$month, median)
-    # monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
-    # monthn_count = tapply(y$E.coli_Geomean, y$month, length)
-    # month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
-    # month_geomean_df = data.frame(month = names(month_geomean), E.coli_Geomean = month_geomean)
-    # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
-    # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
-    # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
+    output$Monthly_Data <- renderDT(table,
+                                    colnames = c("Month","Ncount","Geomean (MPN/100 mL)","Median (MPN/100 mL)","Reduction Needed (%)"),
+                                    rownames = FALSE,selection='none',
+                                    options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
+    
   }
   if(input$mon_unit_type=="Loading"){
     
@@ -513,32 +512,51 @@ observe({
     # Flatten by loading type
     monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
     selectedmonthdata$monload_data = monloads_flat
-    selectedmonthdata$table = monloads_flat
     
-    # Stats calcs
-    # mloadmed = aggregate(Observed_Loading~month, dat = mon_loads, FUN = median)
-    # monthload_pos = rep(max(mloadmed$Loading)*-0.05, length(mloadmed$Loading))
-    # mloadcount = aggregate(Loading~Load_Type+month,dat = monloads_flat, FUN = length)
-    # mloadgeomean = aggregate(Loading~Load_Type+month, monloads_flat, FUN = function(x){exp(mean(log(x)))})
-    # perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
-    # perc_red_df = data.frame(perc_red = perc_red, xpos = 0:(length(perc_red)-1), ypos = month_geomean+.03*max(month_geomean))
-    # perc_red_df = perc_red_df[perc_red_df$perc_red>0,]
+    # Create summary table for app
+    agg_monloads0 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=function(x){exp(mean(log(x)))})
+    agg_monloads0$Loading = round(agg_monloads0$Loading, digits = 1)
+    names(agg_monloads0)[names(agg_monloads0)=="Loading"] <- "Geomean_Loading"
+    agg_monloads1 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=length)
+    names(agg_monloads1)[names(agg_monloads1)=="Loading"] <- "Ncount"
+    agg_monloads2 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=median)
+    agg_monloads2$Loading = round(agg_monloads2$Loading, digits = 1)
+    names(agg_monloads2)[names(agg_monloads2)=="Loading"] <- "Median_Loading"
+    aggseldg = merge(agg_monloads0, agg_monloads1, all = TRUE)
+    aggseldg = merge(aggseldg, agg_monloads2, all = TRUE)
+    
+    # Percent Reduction calcs
+    library(tidyr)
+    gmean_isolated = aggseldg[,c("month","Load_Type","Geomean_Loading")]
+    gmean_iso = gmean_isolated %>% spread(Load_Type,Geomean_Loading)
+    gmean_iso$Percent_Reduction <- ifelse(gmean_iso$Observed_Loading>gmean_iso$TMDL,round(perc.red(gmean_iso$TMDL,gmean_iso$Observed_Loading), digits = 0),0)
+    gmean_iso = gmean_iso[!is.na(gmean_iso$Observed_Loading),c("month","Percent_Reduction")]
+    gmean_iso$Load_Type = "Observed_Loading"
+    aggseldg2 = merge(aggseldg, gmean_iso, all.x = TRUE)
+    
+    table = aggseldg2
+    table = table[order(table$Load_Type, table$month),c("month","Load_Type","Ncount","Geomean_Loading","Median_Loading","Percent_Reduction")]
+    output$Monthly_Data <- renderDT(table,
+                                    colnames = c("Month","Load Type","Ncount","Geomean (MPN/day)","Median (MPN/day)","Reduction Needed (%)"),
+                                    rownames = FALSE,selection='none',filter="top",
+                                    options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
 })
 
 output$Monthly_Geomeans <- renderPlot({
   req(selectedmonthdata$aggseldg)
-  boxcolors = piratepal(palette="up")
+  boxcolors = piratepal(palette="appletv")
       if(input$mon_unit_type=="Concentration"){
         y = selectedmonthdata$seldg
         y = droplevels(y[order(y$month),])
-        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", col = boxcolors[1])
-        abline(h = crits$geomcrit, col = "green", lwd = 3, lty = 2)
-        abline(h = crits$maxcrit, col = "red", lwd = 3, lty = 2)
+        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", xlab = "",col = boxcolors[1])
+        abline(h = crits$geomcrit, col = boxcolors[4], lwd = 3, lty = 2)
+        abline(h = crits$maxcrit, col = boxcolors[3], lwd = 3, lty = 2)
+        legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(boxcolors[3],boxcolors[4]), bty = "n")
         
         # add data points
         if(input$viewmondat){
-          points(y$position, y$E.coli_Geomean, pch = 19, cex = 0.8, col = "red")
+          points(y$position, y$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[2])
         }
       }
       if(input$mon_unit_type=="Loading"){
@@ -557,19 +575,14 @@ output$Monthly_Geomeans <- renderPlot({
         # data frame with all loading data and their positions 
         pointpos = merge(monloads_flat, repmons, all.x = TRUE)
         
-        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where,xaxt = "n", ylab = "Loading (MPN/day)", col = boxcolors[1:2])
+        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = "Loading (MPN/day)", xlab = "",col = boxcolors[1:2])
         axis(side = 1, at = monlab_pos,labels = month.abb)
         
         if(input$viewmondat){
-          points(pointpos$position, pointpos$Loading, pch = 19, cex = 0.8, col = "red")
+          points(pointpos$position, pointpos$Loading, pch = 22, cex = 1, col = "black", bg = boxcolors[3])
         }
       }
       })
-
-# Data table
-output$Monthly_Data <- renderDT(selectedmonthdata$table,
-                                rownames = FALSE,selection='none',filter="top",
-                                options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
 
 # output$Monthly_Geomeans <- renderPlotly({
 #   req(selectedmonthdata$seldg)
