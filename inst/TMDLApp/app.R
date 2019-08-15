@@ -72,7 +72,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   br(),
                                                   br(),
                                                   uiOutput("rec_unit_type"),
-                                                  checkboxInput("rec_medplot", label = strong("View Medians and Quartiles"))),
+                                                  checkboxInput("viewrecdat", label = "View data points?")),
                                      mainPanel(plotOutput("Rec_Geomeans", height="700px"),
                                                hr(),
                                                br(),
@@ -83,7 +83,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   br(),
                                                   br(),
                                                   uiOutput("irg_unit_type"),
-                                                  checkboxInput("irg_medplot", label = strong("View Medians and Quartiles"))),
+                                                  checkboxInput("viewirgdat", label = "View data points?")),
                                      mainPanel(plotOutput("Irg_Geomeans", height="700px"),
                                                hr(),
                                                br(),
@@ -656,6 +656,10 @@ output$Rec_Geomeans <- renderPlot({
   req(input$rec_unit_type)
   
   recdata = recdataset$data
+  aggdata = recdataset$aggregdat
+  
+  recdata <<- recdata
+  aggdata <<- aggdata
   
   if(input$rec_unit_type=="Concentration"){
     
@@ -668,18 +672,73 @@ output$Rec_Geomeans <- renderPlot({
     yearlab = data.frame("position" = positions[c(TRUE,FALSE)]+0.5, "Year" = unique(recdata$Year))
 
     recdata1 = merge(recdata,yearpos, all.x = TRUE)
+    aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
     boxplot(recdata1$E.coli_Geomean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
     legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.8)
     
+    # Add data points
+    if(input$viewrecdat){
+      points(recdata1$position, recdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+    }
+  
   }
   
   if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$ML_Name){
     
-  }
+    recdata2 = recdata[!is.na(recdata$Rec_Season),]
+    recdata_flat = tidyr::gather(recdata2, key = "Type", value = "Load", c("TMDL","Observed_Loading"))
+    
+    plotrange = c(min(recdata_flat$Load),max(recdata_flat$Load))
+    
+    ### Rec season
+
+    recl = recdata_flat[which(recdata_flat$Rec_Season=="Rec Season"),]
+    
+    # Get x-axis set up
+    yearnum1 = length(unique(recl$Year))
+    positions1 = 1:(yearnum1*2+(yearnum1-1))
+    rid1 = positions1%%3
+    positions1 = positions1[!rid1==0]
+    yearpos1 = data.frame("Year"=rep(unique(recl$Year),each = 2), "position" = positions1, "Type" = rep(c("TMDL","Observed_Loading"),yearnum1))
+    yearlab1 = data.frame("position" = positions1[c(TRUE,FALSE)]+0.5, "Year" = unique(recl$Year))
+    
+    recl = merge(recl,yearpos1, all.x = TRUE)
+    aggdata1 = merge(aggdata, yearlab1, all.x = TRUE)
+    aggyear1 = unique(aggdata1[which(aggdata1$Rec_Season=="Rec Season"),c("Year","Ncount_rec_L","position")])
+    aggyear1 = aggyear1[complete.cases(aggyear1),]
+    
+    ### Not rec season
+    nrecl = recdata_flat[which(recdata_flat$Rec_Season=="Not Rec Season"),]
+    
+    # Get x-axis set up
+    yearnum2 = length(unique(nrecl$Year))
+    positions2 = 1:(yearnum2*2+(yearnum2-1))
+    rid2 = positions2%%3
+    positions2 = positions2[!rid2==0]
+    yearpos2 = data.frame("Year"=rep(unique(nrecl$Year),each = 2), "position" = positions2, "Type" = rep(c("TMDL","Observed_Loading"),yearnum2))
+    yearlab2 = data.frame("position" = positions2[c(TRUE,FALSE)]+0.5, "Year" = unique(nrecl$Year))
+    
+    nrecl = merge(nrecl,yearpos2, all.x = TRUE)
+    aggdata2 = merge(aggdata, yearlab2, all.x = TRUE)
+    aggyear2 = unique(aggdata2[which(aggdata2$Rec_Season=="Not Rec Season"),c("Year","Ncount_rec_L","position")])
+    aggyear2 = aggyear2[complete.cases(aggyear2),]
+    
+    par(mfrow = c(1,2))
+    
+    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    axis(1, at = yearlab1$position, label = yearlab1$Year)
+    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_rec_L), cex = 0.8)
+    
+    boxplot(nrecl$Load~nrecl$Type+nrecl$Year, at = positions2, main = "Not Rec Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(3,1)], lty = 1, outline = FALSE)
+    axis(1, at = yearlab2$position, label = yearlab2$Year)
+    text(aggyear2$position,rep(-10, length(aggyear2$position)), labels = paste("n =",aggyear2$Ncount_rec_L), cex = 0.8)
+    }
 })
 
 observe({
