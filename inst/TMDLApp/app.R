@@ -809,35 +809,35 @@ output$irg_unit_type <- renderUI({
   selectInput("irg_unit_type","Select Measurement Type", choices = subd, selected = subd[1])
 })
 
-# Create rec data reactive object
+# Create irg data reactive object
 irgdataset <- reactiveValues()
 
 observe({
   req(input$irg_unit_type)
   
-  irgdataset$aggregdat = workbook$Irg_Season_Data[workbook$Irg_Season_Data$ML_Name==input$recsite,]
+  irgdataset$aggregdat = workbook$Irg_Season_Data[workbook$Irg_Season_Data$ML_Name==input$irgsite,]
   
   if(input$irg_unit_type=="Concentration"){
-    concdata = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$recsite,]
+    concdata = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$irgsite,]
     concdata$Year = lubridate::year(concdata$Date)
-    concdata$Rec_Season = factor(concdata$Rec_Season, levels = c("Rec Season","Not Rec Season"))
+    concdata$Irg_Season = factor(concdata$Irg_Season, levels = c("Irrigation Season","Not Irrigation Season"))
     
-    recdataset$data = concdata
+    irgdataset$data = concdata
     
     # For the table
-    aggreg = recdataset$aggregdat
-    concmed = aggregate(E.coli_Geomean~Rec_Season+Year, data = concdata, FUN = median)
+    aggreg = irgdataset$aggregdat
+    concmed = aggregate(E.coli_Geomean~Irg_Season+Year, data = concdata, FUN = median)
     names(concmed)[names(concmed)=="E.coli_Geomean"] <- "Median"
     aggreg1 = merge(aggreg, concmed, all.x = TRUE)
-    aggreg2 = aggreg1[,c("Year","Rec_Season","Ncount_rec_C","E.coli_Geomean","Median","Percent_Reduction_C")]
+    aggreg2 = aggreg1[,c("Year","Irg_Season","Ncount_irg_C","E.coli_Geomean","Median","Percent_Reduction_C")]
     names(aggreg2) = c("Year","Season","Ncount","Geomean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
-    output$Rec_Data <- renderDT(aggreg2,
+    output$Irg_Data <- renderDT(aggreg2,
                                 rownames = FALSE,selection='none',
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
   
-  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$ML_Name){
-    loaddat = workbook$LDC_Data[workbook$LDC_Data$ML_Name==input$recsite,]
+  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$ML_Name){
+    loaddat = workbook$LDC_Data[workbook$LDC_Data$ML_Name==input$irgsite,]
     
     # Because flow data may be present outside of the time period of ecoli data, ensure loading dataset cut to a date range with both TMDL and observed loading
     mindate = min(loaddat$Date[!is.na(loaddat$Observed_Loading)])
@@ -845,16 +845,16 @@ observe({
     loaddat = loaddat[loaddat$Date>=mindate&loaddat$Date<=maxdate,]
     loaddat$Year = lubridate::year(loaddat$Date)
     
-    recdataset$data = loaddat
+    irgdataset$data = loaddat
     
     # For the table
-    aggreg = recdataset$aggregdat
+    aggreg = irgdataset$aggregdat
     
     # Calculate median
-    oloadmed = aggregate(Observed_Loading~Rec_Season+Year, data = loaddat, FUN = median)
+    oloadmed = aggregate(Observed_Loading~Irg_Season+Year, data = loaddat, FUN = median)
     oloadmed$Load_Type = "Observed_Loading"
     names(oloadmed)[names(oloadmed)=="Observed_Loading"] <- "Median"
-    tloadmed = aggregate(TMDL~Rec_Season+Year, data = loaddat, FUN = median)
+    tloadmed = aggregate(TMDL~Irg_Season+Year, data = loaddat, FUN = median)
     tloadmed$Load_Type = "TMDL"
     names(tloadmed)[names(tloadmed)=="TMDL"] <- "Median"
     loadmeds = merge(oloadmed, tloadmed, all = TRUE)
@@ -865,9 +865,9 @@ observe({
     
     aggreg2 = merge(aggreg1, loadmeds, all.x = TRUE)
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
-    aggreg3 = aggreg2[,c("Year","Rec_Season","Ncount_rec_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
+    aggreg3 = aggreg2[,c("Year","Irg_Season","Ncount_irg_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
     names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
-    output$Rec_Data <- renderDT(aggreg3,
+    output$Irg_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
     
@@ -876,96 +876,96 @@ observe({
   
 })
 
-output$Rec_Geomeans <- renderPlot({
-  req(input$rec_unit_type)
+output$Irg_Geomeans <- renderPlot({
+  req(input$irg_unit_type)
   
-  recdata = recdataset$data
-  aggdata = recdataset$aggregdat
+  irgdata = irgdataset$data
+  aggdata = irgdataset$aggregdat
   
-  if(input$rec_unit_type=="Concentration"){
+  if(input$irg_unit_type=="Concentration"){
     
     # Get x-axis set up
-    yearnum = length(unique(recdata$Year))
+    yearnum = length(unique(irgdata$Year))
     positions = 1:(yearnum*2+(yearnum-1))
     rid = positions%%3
     positions = positions[!rid==0]
-    yearpos = data.frame("Year"=rep(unique(recdata$Year),each = 2), "position" = positions, "Rec_Season" = rep(c("Rec Season","Not Rec Season"),yearnum))
-    yearlab = data.frame("position" = positions[c(TRUE,FALSE)]+0.5, "Year" = unique(recdata$Year))
+    yearpos = data.frame("Year"=rep(unique(irgdata$Year),each = 2), "position" = positions, "Irg_Season" = rep(c("Irrigation Season","Not Irrigation Season"),yearnum))
+    yearlab = data.frame("position" = positions[c(TRUE,FALSE)]+0.5, "Year" = unique(irgdata$Year))
     
-    recdata1 = merge(recdata,yearpos, all.x = TRUE)
+    irgdata1 = merge(irgdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(recdata1$E.coli_Geomean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgdata1$E.coli_Geomean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
-    text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.8)
+    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.8)
     
     # Add data points
-    if(input$viewrecdat){
-      points(recdata1$position, recdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+    if(input$viewirgdat){
+      points(irgdata1$position, irgdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
     }
     
   }
   
-  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$ML_Name){
+  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$ML_Name){
     
-    recdata2 = recdata[!is.na(recdata$Rec_Season),]
-    recdata_flat = tidyr::gather(recdata2, key = "Type", value = "Load", c("TMDL","Observed_Loading"))
+    irgdata2 = irgdata[!is.na(irgdata$Irg_Season),]
+    irgdata_flat = tidyr::gather(irgdata2, key = "Type", value = "Load", c("TMDL","Observed_Loading"))
     
-    plotrange = c(min(recdata_flat$Load),max(recdata_flat$Load))
+    plotrange = c(min(irgdata_flat$Load),max(irgdata_flat$Load))
     
     ### Rec season
     
-    recl = recdata_flat[which(recdata_flat$Rec_Season=="Rec Season"),]
+    irgl = irgdata_flat[which(irgdata_flat$Irg_Season=="Irrigation Season"),]
     
     # Get x-axis set up
-    yearnum1 = length(unique(recl$Year))
+    yearnum1 = length(unique(irgl$Year))
     positions1 = 1:(yearnum1*2+(yearnum1-1))
     rid1 = positions1%%3
     positions1 = positions1[!rid1==0]
-    yearpos1 = data.frame("Year"=rep(unique(recl$Year),each = 2), "position" = positions1, "Type" = rep(c("Observed_Loading","TMDL"),yearnum1))
-    yearlab1 = data.frame("position" = positions1[c(TRUE,FALSE)]+0.5, "Year" = unique(recl$Year))
+    yearpos1 = data.frame("Year"=rep(unique(irgl$Year),each = 2), "position" = positions1, "Type" = rep(c("Observed_Loading","TMDL"),yearnum1))
+    yearlab1 = data.frame("position" = positions1[c(TRUE,FALSE)]+0.5, "Year" = unique(irgl$Year))
     
-    recl = merge(recl,yearpos1, all.x = TRUE)
+    irgl = merge(irgl,yearpos1, all.x = TRUE)
     aggdata1 = merge(aggdata, yearlab1, all.x = TRUE)
-    aggyear1 = unique(aggdata1[which(aggdata1$Rec_Season=="Rec Season"),c("Year","Ncount_rec_L","position")])
+    aggyear1 = unique(aggdata1[which(aggdata1$Irg_Season=="Irrigation Season"),c("Year","Ncount_irg_L","position")])
     aggyear1 = aggyear1[complete.cases(aggyear1),]
     
-    ### Not rec season
-    nrecl = recdata_flat[which(recdata_flat$Rec_Season=="Not Rec Season"),]
+    ### Not irg season
+    nirgl = irgdata_flat[which(irgdata_flat$Irg_Season=="Not Irrigation Season"),]
     
     # Get x-axis set up
-    yearnum2 = length(unique(nrecl$Year))
+    yearnum2 = length(unique(nirgl$Year))
     positions2 = 1:(yearnum2*2+(yearnum2-1))
     rid2 = positions2%%3
     positions2 = positions2[!rid2==0]
-    yearpos2 = data.frame("Year"=rep(unique(nrecl$Year),each = 2), "position" = positions2, "Type" = rep(c("Observed_Loading","TMDL"),yearnum2))
-    yearlab2 = data.frame("position" = positions2[c(TRUE,FALSE)]+0.5, "Year" = unique(nrecl$Year))
+    yearpos2 = data.frame("Year"=rep(unique(nirgl$Year),each = 2), "position" = positions2, "Type" = rep(c("Observed_Loading","TMDL"),yearnum2))
+    yearlab2 = data.frame("position" = positions2[c(TRUE,FALSE)]+0.5, "Year" = unique(nirgl$Year))
     
-    nrecl = merge(nrecl,yearpos2, all.x = TRUE)
+    nirgl = merge(nirgl,yearpos2, all.x = TRUE)
     aggdata2 = merge(aggdata, yearlab2, all.x = TRUE)
-    aggyear2 = unique(aggdata2[which(aggdata2$Rec_Season=="Not Rec Season"),c("Year","Ncount_rec_L","position")])
+    aggyear2 = unique(aggdata2[which(aggdata2$Irg_Season=="Not Irrigation Season"),c("Year","Ncount_irg_L","position")])
     aggyear2 = aggyear2[complete.cases(aggyear2),]
     
     par(mfrow = c(1,2))
     
-    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
-    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
-    text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_rec_L), cex = 0.8)
+    legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_irg_L), cex = 0.8)
     
-    if(input$viewrecdat){
-      points(recl$position, recl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+    if(input$viewirgdat){
+      points(irgl$position, irgl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
     }
     
-    boxplot(nrecl$Load~nrecl$Type+nrecl$Year, at = positions2, main = "Not Rec Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(3,1)], lty = 1, outline = FALSE)
+    boxplot(nirgl$Load~nirgl$Type+nirgl$Year, at = positions2, main = "Not Irrigation Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(3,1)], lty = 1, outline = FALSE)
     axis(1, at = yearlab2$position, label = yearlab2$Year)
-    text(aggyear2$position,rep(-10, length(aggyear2$position)), labels = paste("n =",aggyear2$Ncount_rec_L), cex = 0.8)
+    text(aggyear2$position,rep(-10, length(aggyear2$position)), labels = paste("n =",aggyear2$Ncount_irg_L), cex = 0.8)
     
-    if(input$viewrecdat){
-      points(nrecl$position, nrecl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+    if(input$viewirgdat){
+      points(nirgl$position, nirgl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
     }
     
   }
