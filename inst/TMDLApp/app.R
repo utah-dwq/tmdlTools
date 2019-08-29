@@ -9,7 +9,7 @@ require(reshape2)
 require(markdown)
 require(dplyr)
 require(plyr)
-require(plotly)
+require(tidyr)
 
 source("tmdlCalcs.R")
 
@@ -84,7 +84,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                   br(),
                                                   uiOutput("irg_unit_type"),
                                                   checkboxInput("viewirgdat", label = "View data points?")),
-                                     mainPanel(plotOutput("Irg_Geomeans", height="700px"),
+                                     mainPanel(plotOutput("Irg_Geomeans", height="800px"),
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Irg_Data"), style= "font-size:75%"))),
@@ -417,6 +417,7 @@ output$usds_date <- renderUI({
 
 output$UD_Geomeans <- renderPlot({
   req(input$usdsdate)
+  par(mar= c(10,4,4,1))
   geomeans <- workbook$Daily_Geomean_Data
   selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
   ranks <- workbook$Site_order
@@ -424,13 +425,13 @@ output$UD_Geomeans <- renderPlot({
   usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
   
-  boxplot(usds_data$E.coli_Geomean~usds_data$ML_Name, ylab = "E.coli (MPN/100 mL)", xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
+  boxplot(usds_data$E.coli_Geomean~usds_data$ML_Name, ylab = "E.coli (MPN/100 mL)", xlab = "",ylim = c(-50, max(usds_data$E.coli_Geomean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
   abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
   abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
   legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(linecolors[2],linecolors[3]), bty = "n")
   
-  mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$ML_Name)), cex= 1)
-  
+  #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$ML_Name)), cex= 1)
+  text(x = 1:length(unique(usds_data$ML_Name)), y = rep(-40, length(unique(usds_data$ML_Name))), paste0("n=",udn_count), cex = 0.8)
   # add data points
   if(input$vieworddat){
     points(usds_data$Order, usds_data$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
