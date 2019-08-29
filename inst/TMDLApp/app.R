@@ -385,22 +385,6 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   }
 })
 
-# What data to show in table
-# observe({
-#   req(workbook$Daily_Geomean_Data)
-#   if(!is.null(timeseriesdat$x1)){
-#     ecoli_ts = timeseriesdat$x
-#     flow_ts = timeseriesdat$x1
-#     timeseriesdat$tabledata = merge(ecoli_ts, flow_ts, all = TRUE)
-#   }else{
-#     timeseriesdat$tabledata = timeseriesdat$x
-#   }
-# })
-# 
-# output$Time_Data <- renderDT(timeseriesdat$tabledata,
-#                              rownames = FALSE,selection='none',filter="top",
-#                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
-
 ####################################### UPSTREAM DOWNSTREAM SECTION ##########################
 
 # Dates to choose from
@@ -716,7 +700,7 @@ output$Rec_Geomeans <- renderPlot({
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
     legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
-    text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.8)
+    text(aggdata1$position,rep(-20, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
     
     # Add data points
     if(input$viewrecdat){
@@ -901,7 +885,7 @@ output$Irg_Geomeans <- renderPlot({
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
     legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
-    text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.8)
+    text(aggdata1$position,rep(-20, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
     
     # Add data points
     if(input$viewirgdat){
@@ -1229,4 +1213,22 @@ shinyApp(ui = ui, server = server)
 #add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
 #add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)%>%
 #add_annotations(x = perc_red_df$xpos, y = perc_red_df$ypos, text = paste0(perc_red_df$perc_red,"%"), showarrow = FALSE, font = list(size = 9))
+
+
+# What data to show in table
+# observe({
+#   req(workbook$Daily_Geomean_Data)
+#   if(!is.null(timeseriesdat$x1)){
+#     ecoli_ts = timeseriesdat$x
+#     flow_ts = timeseriesdat$x1
+#     timeseriesdat$tabledata = merge(ecoli_ts, flow_ts, all = TRUE)
+#   }else{
+#     timeseriesdat$tabledata = timeseriesdat$x
+#   }
+# })
+# 
+# output$Time_Data <- renderDT(timeseriesdat$tabledata,
+#                              rownames = FALSE,selection='none',filter="top",
+#                              options = list(scrollY = '300px', paging = FALSE, scrollX=TRUE))
+
 

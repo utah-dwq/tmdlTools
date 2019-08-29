@@ -5,15 +5,11 @@
 #' @param exportfromfunc Logical. Indicates whether workbook should be exported from tmdlCalcs function, or skipped if using Shiny interface. Default is FALSE to accommodate Shiny use.
 #' @return The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly geomeans, rec/non rec geomeans, and irg/non irg geomeans.
 #' @export tmdlCalcs
-#' @importFrom dplyr percent_rank
-#' @importFrom openxlsx loadWorkbook
-#' @importFrom openxlsx readWorkbook
-#' @importFrom openxlsx addWorksheet
-#' @importFrom openxlsx writeData
-#' @importFrom openxlsx saveWorkbook
 #' @import lubridate
 #' @import plyr
+#' @import dplyr
 #' @import shiny
+#' @import openxlsx
 
 # library(openxlsx)
 # library(lubridate)
@@ -57,7 +53,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   
   ### Obtain site order from site_order sheet ###
   if("Site_order"%in%wb.dat$sheet_names){
-    site.order = readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
+    site.order = openxlsx::readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
     calcs$Site_order = site.order
   }
   
