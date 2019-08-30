@@ -615,7 +615,6 @@ observe({
   req(input$rec_unit_type)
   
   recdataset$aggregdat = workbook$Rec_Season_Data[workbook$Rec_Season_Data$ML_Name==input$recsite,]
-  aggreg <<- recdataset$aggregdat
   
   if(input$rec_unit_type=="Concentration"){
     concdata = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$recsite,]
@@ -700,7 +699,8 @@ output$Rec_Geomeans <- renderPlot({
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
     legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
-    text(aggdata1$position,rep(-20, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
+    #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
+    mtext(paste("n =",aggdata1$Ncount_rec_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     
     # Add data points
     if(input$viewrecdat){
@@ -885,8 +885,8 @@ output$Irg_Geomeans <- renderPlot({
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
     legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
-    text(aggdata1$position,rep(-20, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
-    
+    #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
+    mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
     if(input$viewirgdat){
       points(irgdata1$position, irgdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
