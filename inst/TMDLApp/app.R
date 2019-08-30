@@ -98,9 +98,9 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                               choices=c("Calendar Seasons","Recreation Seasons","Irrigation Seasons")), width = 3),
                                      mainPanel(plotOutput("LDC", width="100%", height="700px"),
                                                hr(),
-                                               div(DT::dataTableOutput("LDC_Data", height=20),style="font-size:75%"))),
-                            tabPanel("User Guide",
-                                     includeMarkdown("user_guide.Rmd"))
+                                               div(DT::dataTableOutput("LDC_Data", height=20),style="font-size:75%")))#,
+                            # tabPanel("User Guide",
+                            #          includeMarkdown("user_guide.Rmd"))
               )
 )
 
