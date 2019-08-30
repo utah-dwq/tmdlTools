@@ -90,7 +90,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                div(DT::dataTableOutput("Irg_Data"), style= "font-size:75%"))),
                             tabPanel("Load Duration Curves",
                                      h3("Bacterial Loadings Across Flow Regimes"),
-                                     p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification."),
+                                     p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification. Percentages in parentheses indicate the percent of observed loading values exceeding the TMDL at each flow regime."),
                                      sidebarPanel(uiOutput("ldcsite"),
                                                   radioButtons("ldc_type", label = "Plot Type", choices = c("Scatterplot", "Boxplot"), selected = "Scatterplot", inline = TRUE),
                                                   selectInput("pt_type",
@@ -973,7 +973,22 @@ output$LDC <- renderPlot({
   ldcdata = workbook$LDC_Data
   x = ldcdata[ldcdata$ML_Name==input$ldcsite,]
   flow.plot <- x[order(x$Flow_Percentile),]
-
+  flow.plot$Regime = "Low"
+  flow.plot$Regime[flow.plot$Flow_Percentile<=90] = "Dry"
+  flow.plot$Regime[flow.plot$Flow_Percentile<=60] = "Mid"
+  flow.plot$Regime[flow.plot$Flow_Percentile<=40] = "Moist"
+  flow.plot$Regime[flow.plot$Flow_Percentile<=10] = "High"
+  
+  exc_regime <- function(x){
+    x = x[!is.na(x$Observed_Loading),]
+    exceed = round(length(x$Observed_Loading[x$Observed_Loading>x$TMDL])/length(x$Observed_Loading)*100, digits = 0)
+  }
+  
+  flow_exc = plyr::ddply(.data = flow.plot, .variables = c("Regime"), .fun = exc_regime)
+  names(flow_exc)[names(flow_exc)=="V1"] = "Percent Exceedance"
+  flow_exc$`Percent Exceedance` = paste(flow_exc$`Percent Exceedance`,"%")
+  
+    
   # Pull out observed loadings (E.coli data)
   ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
 
@@ -982,11 +997,11 @@ output$LDC <- renderPlot({
   abline(v=40, lty=2)
   abline(v=60, lty=2)
   abline(v=90, lty=2)
-  text(5, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"High \n Flows")
-  text(25, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Moist \n Conditions")
-  text(50, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Mid-Range \n Flows")
-  text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Dry \n Conditions")
-  text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),"Low \n Flows")
+  text(5, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),paste0("High \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="High"],")"))
+  text(25, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Moist \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Moist"],")"))
+  text(50, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Mid-Range \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Mid"],")"))
+  text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Dry \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Dry"],")"))
+  text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),paste0("Low \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Low"],")"))
   lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="firebrick3", lwd=2)
 
 
