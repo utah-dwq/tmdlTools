@@ -191,6 +191,9 @@ output$dwnloadbutton <- renderUI({
      addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
      writeData(wb, sheet = names(wbdownload)[i], wbdownload[[i]], rowNames = FALSE, colNames = TRUE)
    }
+   if(length(wbdownload)>7){
+     worksheetOrder(wb) = c(5,1,7,3,9,2,4,6,8)
+   }else{worksheetOrder(wb) = c(4,1,6,7,2,3,5)}
    wbdwn$outputworkbook = wb
  })
 
@@ -628,6 +631,7 @@ observe({
     concmed = aggregate(E.coli_Geomean~Rec_Season+Year, data = concdata, FUN = median)
     names(concmed)[names(concmed)=="E.coli_Geomean"] <- "Median"
     aggreg1 = merge(aggreg, concmed, all.x = TRUE)
+    aggreg1$E.coli_Geomean = round(aggreg1$E.coli_Geomean, digits = 1)
     aggreg2 = aggreg1[,c("Year","Rec_Season","Ncount_rec_C","E.coli_Geomean","Median","Percent_Reduction_C")]
     names(aggreg2) = c("Year","Season","Ncount","Geomean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Rec_Data <- renderDT(aggreg2,
@@ -665,6 +669,7 @@ observe({
     aggreg2 = merge(aggreg1, loadmeds, all.x = TRUE)
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
     aggreg3 = aggreg2[,c("Year","Rec_Season","Ncount_rec_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
+    aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
     names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Rec_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
@@ -814,6 +819,7 @@ observe({
     concmed = aggregate(E.coli_Geomean~Irg_Season+Year, data = concdata, FUN = median)
     names(concmed)[names(concmed)=="E.coli_Geomean"] <- "Median"
     aggreg1 = merge(aggreg, concmed, all.x = TRUE)
+    aggreg1$E.coli_Geomean = round(aggreg1$E.coli_Geomean, digits = 1)
     aggreg2 = aggreg1[,c("Year","Irg_Season","Ncount_irg_C","E.coli_Geomean","Median","Percent_Reduction_C")]
     names(aggreg2) = c("Year","Season","Ncount","Geomean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Irg_Data <- renderDT(aggreg2,
@@ -851,6 +857,7 @@ observe({
     aggreg2 = merge(aggreg1, loadmeds, all.x = TRUE)
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
     aggreg3 = aggreg2[,c("Year","Irg_Season","Ncount_irg_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
+    aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
     names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Irg_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
