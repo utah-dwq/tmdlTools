@@ -3,6 +3,7 @@ require(openxlsx)
 require(lubridate)
 require(DT)
 require(shinyjs)
+require(shinyjqui)
 require(yarrr)
 require(colorspace)
 require(reshape2)
@@ -52,7 +53,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                             tabPanel("Upstream-Downstream",
                                      h3("Bacterial Concentrations Upstream to Downstream"),
                                      h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations. The red dotted line in the boxplot represents the maximum",em("E.coli"), "concentration criterion, while the orange dotted line represents the geometric mean criterion."),
-                                     sidebarPanel(uiOutput("usds_date"),
+                                     sidebarPanel(uiOutput("usds_site"),
+                                                  uiOutput("usds_date"),
                                                   checkboxInput("vieworddat", label = "View data points?")),
                                      mainPanel(plotOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
@@ -388,6 +390,14 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
 
 ####################################### UPSTREAM DOWNSTREAM SECTION ##########################
 
+# Sites to choose from
+output$usds_site <- renderUI({
+  req(workbook$Site_order)
+  siteord = workbook$Site_order
+  siteord$ML_Name = reorder(siteord$ML_Name, siteord$Order)
+  selectizeInput("usdssite", label = "Select Sites", choices = siteord$ML_Name, selected = NULL, multiple = TRUE)
+})
+
 # Dates to choose from
 output$usds_date <- renderUI({
   req(workbook$Daily_Geomean_Data)
@@ -401,13 +411,15 @@ output$usds_date <- renderUI({
 })
 
 output$UD_Geomeans <- renderPlot({
+  req(input$usdssite)
   req(input$usdsdate)
   par(mar= c(10,4,4,1))
-  geomeans <- workbook$Daily_Geomean_Data
+  siteord = workbook$Site_order[workbook$Site_order$ML_Name%in%input$usdssite,]
+  siteord$Order = 1:length(siteord$ML_Name)
+  geomeans <- workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name%in%input$usdssite,]
   selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
-  ranks <- workbook$Site_order
-  usds_data = merge(selgeomeans, ranks, all.x = TRUE)
-  usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(ranks$ML_Name)))
+  usds_data = merge(selgeomeans, siteord, all.x = TRUE)
+  usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(siteord$ML_Name)))
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
   
   boxplot(usds_data$E.coli_Geomean~usds_data$ML_Name, ylab = "E.coli (MPN/100 mL)", xlab = "",ylim = c(-50, max(usds_data$E.coli_Geomean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
