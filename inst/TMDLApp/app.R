@@ -337,8 +337,6 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
   abline(h=crits$maxcrit,col="orange", lwd=2)
   abline(h=crits$geomcrit, col="red", lwd=2)
-  text(min+200,crits$maxcrit-100, paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"))
-  text(min+500,crits$geomcrit-100, paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL"))
   site = vector()
   colr = vector()
 }
@@ -361,7 +359,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = concol
     }
-    l=legend("topleft",c(site),col="black",pt.bg=c(colr), pch=21, bty="n", pt.cex=2,cex=1)
+    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"),paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL")),col=c(rep("black",length(colr)),"orange","red"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
   }
   
 # Flow plots
