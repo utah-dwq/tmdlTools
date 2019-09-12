@@ -317,7 +317,7 @@ observe({
     timeseriesdat$min = input$tsdatrange[1]
     timeseriesdat$max = input$tsdatrange[2] 
   }
-  x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
+  x <- x[x$Activity.Start.Date>=timeseriesdat$min&x$Activity.Start.Date<=timeseriesdat$max,]
   if(dim(x)[1]>0){
     timeseriesdat$x = x
   }else{timeseriesdat$x = NULL}  
@@ -328,7 +328,7 @@ observe({
   req(input$checkbox1)
   x1 = workbook$Flow_data
   x1 = x1[x1$Monitoring.Location.ID %in% input$checkbox1,]
-  x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
+  x1 <- x1[x1$Activity.Start.Date>=timeseriesdat$min&x1$Activity.Start.Date<=timeseriesdat$max,]
   if(dim(x1)[1]>0){
     timeseriesdat$x1 = x1
   }else{timeseriesdat$x1 = NULL}})
@@ -339,7 +339,10 @@ output$Time_Series <- renderPlot({
   min = timeseriesdat$min
   max = timeseriesdat$max
   units = paste0(workbook$Daily_Mean_Data$Parameter.Name[1]," (",workbook$Daily_Mean_Data$Parameter.Unit[1],")")
-  max_y = max(timeseriesdat$x$Parameter.Value)
+  if(is.null(timeseriesdat$x)){
+    max_y = max(workbook$Daily_Mean_Data$Parameter.Value)
+  }else{max_y = max(timeseriesdat$x$Parameter.Value)}
+  
   
   par(mar=c(5.1,4.1,4.1,4.1))
   
