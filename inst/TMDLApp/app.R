@@ -20,13 +20,13 @@ dwqPalette <- c("#034963","#0b86a3","#00a1c6")
 boxcolors = dwqPalette
 linecolors = deqPalette
 
-ui <- fluidPage(title="E.coli Data Explorer",
-                titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), em("Escherichia coli"),"Data Visualization Tool")),
+ui <- fluidPage(title="TMDL Data Explorer",
+                titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), "TMDL Data Visualization Tool")),
                 tabsetPanel(id="all_the_things",
                             tabPanel("Upload Data",
                                      useShinyjs(),
-                                     h3("Select your Excel workbook containing ", em("E.coli "), "data"),
-                                     p(strong("NOTE: "),"Workbooks must fit the ", em("E.coli"), " template, but you have the option in this app to calculate loadings and seasonal geomeans on the uploaded dataset."),
+                                     h3("Select your Excel workbook containing parameter data"),
+                                     p(strong("NOTE: "),"Workbooks must fit the data template (AWQMS), but you have the option in this app to calculate loadings and seasonal means on the uploaded dataset."),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
                                                   uiOutput("loadcalcs"),
                                                   uiOutput("selectsheet"),
@@ -37,7 +37,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      ),
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
-                                     h3("Bacterial Concentrations Over Time by Site"),
+                                     h3("Parameter Concentrations Over Time by Site"),
                                      sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
@@ -51,48 +51,48 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                                br(),
                                                div(DT::dataTableOutput("Time_Data"), style= "font-size:75%"))),
                             tabPanel("Upstream-Downstream",
-                                     h3("Bacterial Concentrations Upstream to Downstream"),
-                                     h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations. The red dotted line in the boxplot represents the maximum",em("E.coli"), "concentration criterion, while the orange dotted line represents the geometric mean criterion."),
+                                     h3("Parameter Concentrations Upstream to Downstream"),
+                                     h5("Use the date range slider to select the period of record over which to view parameter concentrations. The red dotted line in the boxplot represents the maximum parameter concentration criterion, while the orange dotted line represents the geometric mean criterion."),
                                      sidebarPanel(uiOutput("usds_site"),
                                                   uiOutput("usds_date"),
                                                   checkboxInput("vieworddat", label = "View data points?")),
-                                     mainPanel(plotOutput("UD_Geomeans", height="700px"))),
+                                     mainPanel(plotOutput("UD_Means", height="700px"))),
                             tabPanel("Monthly",
-                                     h3("Bacterial Concentrations/Loadings by Month"),
+                                     h3("Parameter Concentrations/Loadings by Month"),
                                      sidebarPanel(uiOutput("monthsite"),
                                                   div(id="date1",uiOutput("mondatrange")),
                                                   br(),
                                                   uiOutput("mon_unit_type"),
                                                   checkboxInput("viewmondat", label = "View data points?")),
-                                     mainPanel(plotOutput("Monthly_Geomeans", height="700px"),
+                                     mainPanel(plotOutput("Monthly_Means", height="700px"),
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Monthly_Data"), style= "font-size:75%"))),
                             tabPanel("Rec/Non-Rec",
-                                     h3("Bacterial Concentrations/Loadings by Year"),
+                                     h3("Parameter Concentrations/Loadings by Year"),
                                      sidebarPanel(uiOutput("recsite"),
                                                   br(),
                                                   br(),
                                                   uiOutput("rec_unit_type"),
                                                   checkboxInput("viewrecdat", label = "View data points?")),
-                                     mainPanel(plotOutput("Rec_Geomeans", height="700px"),
+                                     mainPanel(plotOutput("Rec_Means", height="700px"),
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Rec_Data"), style= "font-size:75%"))),
                             tabPanel("Irrigation/Non-Irrigation",
-                                     h3("Bacterial Concentrations/Loadings by Year"),
+                                     h3("Parameter Concentrations/Loadings by Year"),
                                      sidebarPanel(uiOutput("irgsite"),
                                                   br(),
                                                   br(),
                                                   uiOutput("irg_unit_type"),
                                                   checkboxInput("viewirgdat", label = "View data points?")),
-                                     mainPanel(plotOutput("Irg_Geomeans", height="800px"),
+                                     mainPanel(plotOutput("Irg_Means", height="800px"),
                                                hr(),
                                                br(),
                                                div(DT::dataTableOutput("Irg_Data"), style= "font-size:75%"))),
                             tabPanel("Load Duration Curves",
-                                     h3("Bacterial Loadings Across Flow Regimes"),
-                                     p(strong("NOTE: "),em("E.coli "),"loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification. Percentages in parentheses indicate the percent of observed loading values exceeding the TMDL at each flow regime."),
+                                     h3("Parameter Loadings Across Flow Regimes"),
+                                     p(strong("NOTE: "),"Parameter loadings are calculated using the ", strong("geometric mean criterion "),"based on the water body's beneficial use classification. Percentages in parentheses indicate the percent of observed loading values exceeding the TMDL at each flow regime."),
                                      sidebarPanel(uiOutput("ldcsite"),
                                                   radioButtons("ldc_type", label = "Plot Type", choices = c("Scatterplot", "Boxplot"), selected = "Scatterplot", inline = TRUE),
                                                   selectInput("pt_type",
@@ -122,7 +122,7 @@ server <- function(input, output) {
 # Run tmdl tools widget, which disables once clicked
  output$loadcalcs <- renderUI({
     req(input$workbook)
-    radioButtons("loadcalcs", label = "Perform Geomean/Loading Calculations?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
+    radioButtons("loadcalcs", label = "Perform Daily Aggregation/Loading Calcs?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
   })
 
  observeEvent(input$loadcalcs,{
@@ -146,14 +146,14 @@ output$dwnloadbutton <- renderUI({
      out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
      names(out) = sheets
    }
-   workbook$Ecoli_data = out$Ecoli_data
+   workbook$Param_data = out$Param_data
    workbook$Inputs = out$Inputs
    if(!is.null(out$Site_order)){
      workbook$Site_order = out$Site_order
    }
-   if(!is.null(out$Daily_Geomean_Data)){
-     out$Daily_Geomean_Data$E.coli_Geomean = round(out$Daily_Geomean_Data$E.coli_Geomean,1)
-     workbook$Daily_Geomean_Data = out$Daily_Geomean_Data
+   if(!is.null(out$Daily_Mean_Data)){
+     out$Daily_Mean_Data$Parameter.Value_Mean = round(out$Daily_Mean_Data$Parameter.Value_Mean,1)
+     workbook$Daily_Mean_Data = out$Daily_Mean_Data
      workbook$Monthly_Data = out$Monthly_Data
      workbook$Rec_Season_Data = out$Rec_Season_Data
      workbook$Irg_Season_Data = out$Irg_Season_Data
@@ -239,9 +239,10 @@ output$dwnloadbutton <- renderUI({
 # Add unique site names to LDC drop down list (if flow data are available)
 output$ldcsite <- renderUI({
   req(workbook$LDC_Data)
+  loadsites = unique(workbook$LDC_Data$Monitoring.Location.ID[!is.na(workbook$LDC_Data$Observed_Loading)])
   selectInput("ldcsite",
               label = "Site Name",
-              choices=c(unique(workbook$LDC_Data$ML_Name)))
+              choices=loadsites)
 })
 
 ## Save Criteria in own reactive values for use in all plots ##
@@ -258,13 +259,13 @@ observe({
 
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
-  req(workbook$Daily_Geomean_Data)
+  req(workbook$Daily_Mean_Data)
   if(!is.null(workbook$Flow_data)){
-    time1 = workbook$Daily_Geomean_Data$Date
-    time2 = workbook$Flow_data$Date
+    time1 = workbook$Daily_Mean_Data$Activity.Start.Date
+    time2 = workbook$Flow_data$Activity.Start.Date
     timeseries = unique(c(time1,time2))
   }else{
-    timeseries <- workbook$Daily_Geomean_Data$Date
+    timeseries <- workbook$Daily_Mean_Data$Activity.Start.Date
   }
 
   sliderInput("tsdatrange",
@@ -277,10 +278,11 @@ output$tsdatrange <- renderUI({
 
 # Create checkbox menu for e.coli concentrations based on sites present
 output$checkbox <- renderUI({
-  req(workbook$Daily_Geomean_Data)
-  timeseries <- workbook$Daily_Geomean_Data
-  choice <-  unique(timeseries$ML_Name)
-  checkboxGroupInput("checkbox","Select E.coli Site(s)", choices = choice, selected = choice[1])
+  req(workbook$Daily_Mean_Data)
+  timeseries <- workbook$Daily_Mean_Data
+  choice <-  unique(timeseries$Monitoring.Location.ID)
+  choice = choice[order(choice)]
+  checkboxGroupInput("checkbox","Select Concentration Site(s)", choices = choice, selected = choice[1])
 
 })
 
@@ -288,7 +290,8 @@ output$checkbox <- renderUI({
 output$checkbox1 <- renderUI({
   req(workbook$Flow_data)
   flow <- workbook$Flow_data
-  choice <-  unique(flow$ML_Name)
+  choice <-  unique(flow$Monitoring.Location.ID)
+  choice = choice[order(choice)]
   checkboxGroupInput("checkbox1","Select Flow Site(s)", choices = choice, selected = character(0))
 
 })
@@ -298,23 +301,23 @@ timeseriesdat <- reactiveValues()
 
 # Create ecoli dataset and place date range and colors into reactive object
 observe({
-  req(workbook$Daily_Geomean_Data)
+  req(workbook$Daily_Mean_Data)
   # Assign site colors
   colrs <- yarrr::piratepal("basel")
-  sites = unique(workbook$Daily_Geomean_Data$ML_Name)
+  sites = unique(workbook$Daily_Mean_Data$Monitoring.Location.ID)
   nsites = length(sites)
   ML_Col = as.character(rep(colrs, length.out = nsites))
-  sitecols = data.frame(ML_Name = sites, ML_Col = rep(colrs, length.out = nsites))
+  sitecols = data.frame(Monitoring.Location.ID = sites, ML_Col = rep(colrs, length.out = nsites))
   timeseriesdat$sitecols = sitecols
   
   # Sort to ecoli sites and date range
-  x = workbook$Daily_Geomean_Data
-  x = x[x$ML_Name %in% input$checkbox,]
+  x = workbook$Daily_Mean_Data
+  x = x[x$Monitoring.Location.ID %in% input$checkbox,]
   if(!is.null(input$tsdatrange)){
     timeseriesdat$min = input$tsdatrange[1]
     timeseriesdat$max = input$tsdatrange[2] 
   }
-  timeseriesdat$x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
+  timeseriesdat$x <- x[x$Activity.Start.Date>=timeseriesdat$min&x$Activity.Start.Date<=timeseriesdat$max,]
   
 })
 
@@ -322,8 +325,8 @@ observe({
 observe({
   req(input$checkbox1)
   x1 = workbook$Flow_data
-  x1 = x1[x1$ML_Name %in% input$checkbox1,]
-  timeseriesdat$x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
+  x1 = x1[x1$Monitoring.Location.ID %in% input$checkbox1,]
+  timeseriesdat$x1 <- x1[x1$Activity.Start.Date>=timeseriesdat$min&x1$Activity.Start.Date<=timeseriesdat$max,]
 })
 
 output$Time_Series <- renderPlot({
@@ -331,11 +334,13 @@ output$Time_Series <- renderPlot({
   colrs = timeseriesdat$sitecols
   min = timeseriesdat$min
   max = timeseriesdat$max
-
+  units = paste0(workbook$Daily_Mean_Data$Parameter.Name[1]," (",workbook$Daily_Mean_Data$Parameter.Unit[1],")")
+  max_y = max(timeseriesdat$x$Parameter.Value)
+  
 # Base plot  
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
-  plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
+  plot(1, type="n", xlab="", ylab=units, xaxt="n", xlim=c(min, max), ylim=c(0, max_y))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
   abline(h=crits$maxcrit,col="orange", lwd=2)
   abline(h=crits$geomcrit, col="red", lwd=2)
@@ -343,44 +348,45 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   colr = vector()
 }
 
-# E.coli plots
+# Parameter plots
   if(!is.null(input$checkbox)){
     x = timeseriesdat$x
     # Get number of sites
-    uni.sites <- unique(x$ML_Name)
+    uni.sites <- unique(x$Monitoring.Location.ID)
     
-    # Start plotting ecoli concentrations
+    # Start plotting parameter concentrations
     for(i in 1:length(uni.sites)){
-      concol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites[i]])
-      y = x[x$ML_Name==uni.sites[i],]
-      perc.exc = round(length(y$E.coli_Geomean[y$E.coli_Geomean>as.numeric(crits$maxcrit)])/length(y$E.coli_Geomean)*100, digits=0)
+      concol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites[i]])
+      y = x[x$Monitoring.Location.ID==uni.sites[i],]
+      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(crits$maxcrit)])/length(y$Parameter.Value_Mean)*100, digits=0)
       if(input$plottype=="Line"){
-        lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=concol)
+        lines(y$Parameter.Value_Mean~y$Activity.Start.Date, lwd=1, lty=1, col=concol)
       }
-      points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=concol)
+      points(y$Parameter.Value_Mean~y$Activity.Start.Date, pch=21, cex=2, col="black", bg=concol)
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"),paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL")),col=c(rep("black",length(colr)),"orange","red"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
+    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit),paste0("Geometric Mean Crit - ",crits$geomcrit)),col=c(rep("black",length(colr)),"orange","red"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
   }
   
 # Flow plots
   if(!is.null(input$checkbox1)){
     x1 = timeseriesdat$x1
-    uni.sites.1 = unique(x1$ML_Name)
+    x1$Result.Value = as.numeric(x1$Result.Value)
+    uni.sites.1 = unique(x1$Monitoring.Location.ID)
     site1 = vector()
     colr1 = vector()
     par(new = TRUE)
-    plot(1, type="n", xlab="", ylab="", axes = F, xlim=c(min, max), ylim = c(0,max(x1$Flow)))
+    plot(1, type="n", xlab="", ylab="", axes = F, xlim=c(min, max), ylim = c(0,max(x1$Result.Value)))
     axis(side = 4)
     mtext(side = 4, line = 2, "Flow (cfs)")
     for(i in 1:length(uni.sites.1)){
-      flowcol = as.character(colrs$ML_Col[colrs$ML_Name == uni.sites.1[i]])
-      y1 = x1[x1$ML_Name==uni.sites.1[i],]
+      flowcol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites.1[i]])
+      y1 = x1[x1$Monitoring.Location.ID==uni.sites.1[i],]
       if(input$plottype=="Line"){
-        lines(y1$Flow~y1$Date, lwd=1, lty=1, col=flowcol)
+        lines(y1$Result.Value~y1$Activity.Start.Date, lwd=1, lty=1, col=flowcol)
       }
-      points(y1$Flow~y1$Date, pch=23, cex=2, col="black", bg=ggplot2::alpha(flowcol, 0.6))
+      points(y1$Result.Value~y1$Activity.Start.Date, pch=23, cex=2, col="black", bg=ggplot2::alpha(flowcol, 0.6))
       site1[i] = uni.sites.1[i]
       colr1[i] = flowcol
     }
@@ -394,44 +400,44 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
 output$usds_site <- renderUI({
   req(workbook$Site_order)
   siteord = workbook$Site_order
-  siteord$ML_Name = reorder(siteord$ML_Name, siteord$Order)
-  selectizeInput("usdssite", label = "Select Sites", choices = siteord$ML_Name, selected = NULL, multiple = TRUE)
+  siteord$Monitoring.Location.ID = reorder(siteord$Monitoring.Location.ID, siteord$Order)
+  selectizeInput("usdssite", label = "Select Sites", choices = siteord$Monitoring.Location.ID, selected = NULL, multiple = TRUE)
 })
 
 # Dates to choose from
 output$usds_date <- renderUI({
-  req(workbook$Daily_Geomean_Data)
-  us_ds_data <- workbook$Daily_Geomean_Data
+  req(workbook$Daily_Mean_Data)
+  us_ds_data <- workbook$Daily_Mean_Data
   sliderInput("usdsdate",
               label="Date Range",
-              min=min(us_ds_data$Date),
-              max=max(us_ds_data$Date),
-              value = c(min(us_ds_data$Date),max(us_ds_data$Date)),
+              min=min(us_ds_data$Activity.Start.Date),
+              max=max(us_ds_data$Activity.Start.Date),
+              value = c(min(us_ds_data$Activity.Start.Date),max(us_ds_data$Activity.Start.Date)),
               dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
 
-output$UD_Geomeans <- renderPlot({
+output$UD_Means <- renderPlot({
   req(input$usdssite)
   req(input$usdsdate)
   par(mar= c(10,4,4,1))
-  siteord = workbook$Site_order[workbook$Site_order$ML_Name%in%input$usdssite,]
-  siteord$Order = 1:length(siteord$ML_Name)
-  geomeans <- workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name%in%input$usdssite,]
-  selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
-  usds_data = merge(selgeomeans, siteord, all.x = TRUE)
-  usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(siteord$ML_Name)))
-  udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
+  siteord = workbook$Site_order[workbook$Site_order$Monitoring.Location.ID%in%input$usdssite,]
+  siteord$Order = 1:length(siteord$Monitoring.Location.ID)
+  means <- workbook$Daily_Mean_Data[workbook$Daily_Mean_Data$Monitoring.Location.ID%in%input$usdssite,]
+  selmeans <- means[means$Activity.Start.Date>=input$usdsdate[1]&means$Activity.Start.Date<=input$usdsdate[2],]
+  usds_data = merge(selmeans, siteord, all.x = TRUE)
+  usds_data$Monitoring.Location.ID = factor(usds_data$Monitoring.Location.ID, levels = c(as.character(siteord$Monitoring.Location.ID)))
+  udn_count = tapply(usds_data$Parameter.Value_Mean, usds_data$Monitoring.Location.ID, length)
   
-  boxplot(usds_data$E.coli_Geomean~usds_data$ML_Name, ylab = "E.coli (MPN/100 mL)", xlab = "",ylim = c(-50, max(usds_data$E.coli_Geomean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
+  boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = paste0(means$Parameter.Name[1]," (",means$Parameter.Unit[1],")"), xlab = "",ylim = c(-50, max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
   abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
   abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
   legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(linecolors[2],linecolors[3]), bty = "n")
   
-  #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$ML_Name)), cex= 1)
-  text(x = 1:length(unique(usds_data$ML_Name)), y = rep(-40, length(unique(usds_data$ML_Name))), paste0("n=",udn_count), cex = 0.8)
+  #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$Monitoring.Location.ID)), cex= 1)
+  text(x = 1:length(unique(usds_data$Monitoring.Location.ID)), y = rep(-40, length(unique(usds_data$Monitoring.Location.ID))), paste0("n=",udn_count), cex = 0.8)
   # add data points
   if(input$vieworddat){
-    points(usds_data$Order, usds_data$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
+    points(usds_data$Order, usds_data$Parameter.Value_Mean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
   }
   
   })
@@ -440,31 +446,31 @@ output$UD_Geomeans <- renderPlot({
 
 # Sites to choose from
 output$monthsite <- renderUI({
-  req(workbook$Daily_Geomean_Data)
+  req(workbook$Daily_Mean_Data)
   selectInput("monthsite",
               label = "Site Name",
-              choices=unique(workbook$Daily_Geomean_Data$ML_Name))
+              choices=unique(workbook$Daily_Mean_Data$Monitoring.Location.ID))
 })
 
 # Dates to choose from
 output$mondatrange <- renderUI({
   req(input$monthsite)
-  req(workbook$Daily_Geomean_Data)
-  sitedates = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$monthsite,]
+  req(workbook$Daily_Mean_Data)
+  sitedates = workbook$Daily_Mean_Data[workbook$Daily_Mean_Data$Monitoring.Location.ID==input$monthsite,]
   sliderInput("mondatrange",
               label="Date Range",
-              min=min(sitedates$Date),
-              max=max(sitedates$Date),
-              value = c(min(sitedates$Date),max(sitedates$Date)),
+              min=min(sitedates$Activity.Start.Date),
+              max=max(sitedates$Activity.Start.Date),
+              value = c(min(sitedates$Activity.Start.Date),max(sitedates$Activity.Start.Date)),
               dragRange = TRUE, timeFormat="%Y-%m-%d")
 })
 
 # Craft drop down menu for concentration and loading
 output$mon_unit_type <- renderUI({
   req(input$mondatrange)
-  req(workbook$Daily_Geomean_Data)
+  req(workbook$Daily_Mean_Data)
   monthdata <- workbook$Monthly_Data
-  monthdata = monthdata[monthdata$ML_Name==input$monthsite&!is.na(monthdata$Observed_Loading),"Observed_Loading"]
+  monthdata = monthdata[monthdata$Monitoring.Location.ID==input$monthsite&!is.na(monthdata$Observed_Loading),"Observed_Loading"]
   if(length(monthdata)>0){
     subd=c("Concentration","Loading")
   }else{subd=c("Concentration")}
@@ -476,53 +482,60 @@ selectedmonthdata <- reactiveValues()
 
 observe({
   req(input$mon_unit_type)
+  
+  inputs = workbook$Inputs
+  aggFun = inputs[1,"Aggregating.Function"]
+  if(aggFun=="gmean"){
+    aggFun = function(x){exp(mean(log(x)))}
+  }
+  
   if(input$mon_unit_type=="Concentration"){
-    dailygeomeans <- workbook$Daily_Geomean_Data
-    seldailygeomeans <- dailygeomeans[dailygeomeans$ML_Name==input$monthsite&dailygeomeans$Date>=input$mondatrange[1]&dailygeomeans$Date<=input$mondatrange[2],]
-    seldailygeomeans$month = lubridate::month(seldailygeomeans$Date, label=TRUE)
+    dailymeans <- workbook$Daily_Mean_Data
+    seldailymeans <- dailymeans[dailymeans$Monitoring.Location.ID==input$monthsite&dailymeans$Activity.Start.Date>=input$mondatrange[1]&dailymeans$Activity.Start.Date<=input$mondatrange[2],]
+    seldailymeans$month = lubridate::month(seldailymeans$Activity.Start.Date, label=TRUE)
     monthpositions_1 = data.frame("position" = 1:12, "month" = month.abb)
-    seldailygeomeans = merge(seldailygeomeans,monthpositions_1, all.x = TRUE)
-    selectedmonthdata$alldata = seldailygeomeans
+    seldailymeans = merge(seldailymeans,monthpositions_1, all.x = TRUE)
+    selectedmonthdata$alldata = seldailymeans
     
-    aggseldg0 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=function(x){exp(mean(log(x)))})
-    aggseldg0$E.coli_Geomean = round(aggseldg0$E.coli_Geomean, digits = 1)
-    aggseldg1 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=length)
-    names(aggseldg1)[names(aggseldg1)=="E.coli_Geomean"] <- "Ncount"
-    aggseldg2 <- aggregate(E.coli_Geomean~month+MLID+ML_Name, dat=seldailygeomeans, FUN=median)
-    names(aggseldg2)[names(aggseldg2)=="E.coli_Geomean"] <- "Median"
+    aggseldg0 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=aggFun)
+    aggseldg0$Parameter.Value_Mean = round(aggseldg0$Parameter.Value_Mean, digits = 1)
+    aggseldg1 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=length)
+    names(aggseldg1)[names(aggseldg1)=="Parameter.Value_Mean"] <- "Ncount"
+    aggseldg2 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=median)
+    names(aggseldg2)[names(aggseldg2)=="Parameter.Value_Mean"] <- "Median"
     aggseldg2$Median = round(aggseldg2$Median, digits = 1)
     aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
     aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
-    aggseldg$Percent_Reduction <- ifelse(aggseldg$E.coli_Geomean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$E.coli_Geomean), digits=0),0)
+    aggseldg$Percent_Reduction <- ifelse(aggseldg$Parameter.Value_Mean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$Parameter.Value_Mean), digits=0),0)
     aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
     selectedmonthdata$aggregdata = aggseldg
-    table = aggseldg[,!names(aggseldg)%in%c("position","MLID","ML_Name")]
-    table = table[,c("month","Ncount","E.coli_Geomean","Median","Percent_Reduction")]
+    table = aggseldg[,!names(aggseldg)%in%c("position","Monitoring.Location.ID")]
+    table = table[,c("month","Ncount","Parameter.Value_Mean","Median","Percent_Reduction")]
     table = table[order(table$month),]
     
     output$Monthly_Data <- renderDT(table,
-                                    colnames = c("Month","Ncount","Geomean (MPN/100 mL)","Median (MPN/100 mL)","Reduction Needed (%)"),
+                                    colnames = c("Month","Ncount","Mean (MPN/100 mL)","Median (MPN/100 mL)","Reduction Needed (%)"),
                                     rownames = FALSE,selection='none',
                                     options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
     
   }
   
   # Need to stop app from crashing when loading data not available from user selection
-  if(input$mon_unit_type=="Loading"&input$monthsite%in%workbook$LDC_Data$ML_Name){
+  if(input$mon_unit_type=="Loading"&input$monthsite%in%workbook$LDC_Data$Monitoring.Location.ID){
     
     # Isolate to site and period of interest
     mon_loadings = workbook$LDC_Data
-    mon_loads <- mon_loadings[mon_loadings$ML_Name==input$monthsite&mon_loadings$Date>=input$mondatrange[1]&mon_loadings$Date<=input$mondatrange[2],]
-    mon_loads$month = lubridate::month(mon_loads$Date, label=TRUE)
+    mon_loads <- mon_loadings[mon_loadings$Monitoring.Location.ID==input$monthsite&mon_loadings$Activity.Start.Date>=input$mondatrange[1]&mon_loadings$Activity.Start.Date<=input$mondatrange[2],]
+    mon_loads$month = lubridate::month(mon_loads$Activity.Start.Date, label=TRUE)
 
     # Flatten by loading type
     monloads_flat = reshape2::melt(mon_loads, measure.vars = c("TMDL","Observed_Loading"), variable.name = "Load_Type", value.name = "Loading")
     selectedmonthdata$alldata = monloads_flat
     
     # Create summary table for app
-    agg_monloads0 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=function(x){exp(mean(log(x)))})
+    agg_monloads0 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=aggFun)
     agg_monloads0$Loading = round(agg_monloads0$Loading, digits = 1)
-    names(agg_monloads0)[names(agg_monloads0)=="Loading"] <- "Geomean_Loading"
+    names(agg_monloads0)[names(agg_monloads0)=="Loading"] <- "Mean_Loading"
     agg_monloads1 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=length)
     names(agg_monloads1)[names(agg_monloads1)=="Loading"] <- "Ncount"
     agg_monloads2 = aggregate(Loading~month+Load_Type, dat = monloads_flat, FUN=median)
@@ -533,8 +546,8 @@ observe({
     
     # Percent Reduction calcs
     library(tidyr)
-    gmean_isolated = aggseldg[,c("month","Load_Type","Geomean_Loading")]
-    gmean_iso = gmean_isolated %>% spread(Load_Type,Geomean_Loading)
+    gmean_isolated = aggseldg[,c("month","Load_Type","Mean_Loading")]
+    gmean_iso = gmean_isolated %>% spread(Load_Type,Mean_Loading)
     gmean_iso$Percent_Reduction <- ifelse(gmean_iso$Observed_Loading>gmean_iso$TMDL,round(perc.red(gmean_iso$TMDL,gmean_iso$Observed_Loading), digits = 0),0)
     gmean_iso = gmean_iso[!is.na(gmean_iso$Observed_Loading),c("month","Percent_Reduction")]
     gmean_iso$Load_Type = "Observed_Loading"
@@ -542,22 +555,22 @@ observe({
     selectedmonthdata$aggregdata = aggseldg2
     
     table = aggseldg2
-    table = table[order(table$Load_Type, table$month),c("month","Load_Type","Ncount","Geomean_Loading","Median_Loading","Percent_Reduction")]
+    table = table[order(table$Load_Type, table$month),c("month","Load_Type","Ncount","Mean_Loading","Median_Loading","Percent_Reduction")]
     output$Monthly_Data <- renderDT(table,
-                                    colnames = c("Month","Load Type","Ncount","Geomean (MPN/day)","Median (MPN/day)","Reduction Needed (%)"),
+                                    colnames = c("Month","Load Type","Ncount","Mean (MPN/day)","Median (MPN/day)","Reduction Needed (%)"),
                                     rownames = FALSE,selection='none',filter="top",
                                     options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
 })
 
-output$Monthly_Geomeans <- renderPlot({
+output$Monthly_Means <- renderPlot({
   req(selectedmonthdata$aggregdata)
       if(input$mon_unit_type=="Concentration"){
         y = selectedmonthdata$alldata
         y = droplevels(y[order(y$month),])
         positions = unique(y[,c("month","position")])
         posi = positions[order(positions$month),]
-        boxplot(y$E.coli_Geomean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
+        boxplot(y$Parameter.Value_Mean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
         abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
         abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
         legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(linecolors[2],linecolors[3]), bty = "n")
@@ -569,10 +582,10 @@ output$Monthly_Geomeans <- renderPlot({
         
         # add data points
         if(input$viewmondat){
-          points(y$position, y$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
+          points(y$position, y$Parameter.Value_Mean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
         }
       }
-      if(input$mon_unit_type=="Loading"&input$monthsite%in%workbook$LDC_Data$ML_Name){
+      if(input$mon_unit_type=="Loading"&input$monthsite%in%workbook$LDC_Data$Monitoring.Location.ID){
         
         monloads_flat = selectedmonthdata$alldata
         
@@ -590,7 +603,7 @@ output$Monthly_Geomeans <- renderPlot({
         
         boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = "Loading (MPN/day)", xlab = "",col = boxcolors[1:2], lty = 1, outline = FALSE)
         axis(side = 1, at = monlab_pos,labels = month.abb)
-        legend("topright",legend = c("TMDL","Observed Loading"), pch = c(15,15), col = c(boxcolors[1],boxcolors[2]), pt.bg = "black", pt.cex = 1.5, bty = "n")
+        legend("topright",legend = c("TMDL","Observed Loading"), pch = c(22,22), pt.bg = c(boxcolors[1],boxcolors[2]), col = "black", pt.cex = 1.5, bty = "n")
         mtext(paste0("n=",selectedmonthdata$aggregdata$Ncount), side = 1, line = 3, at = where, cex= 0.7)
         
         if(input$viewmondat){
@@ -604,7 +617,7 @@ output$Monthly_Geomeans <- renderPlot({
 # Sites to choose from
 output$recsite <- renderUI({
   req(workbook$Rec_Season_Data)
-  recsites <- unique(workbook$Rec_Season_Data$ML_Name)
+  recsites <- unique(workbook$Rec_Season_Data$Monitoring.Location.ID)
   selectInput("recsite",
               label = "Site Name",
               choices=recsites)
@@ -614,7 +627,7 @@ output$recsite <- renderUI({
 output$rec_unit_type <- renderUI({
   req(workbook$Rec_Season_Data)
   recdata <- workbook$Rec_Season_Data
-  recdata = recdata[recdata$ML_Name==input$recsite&!is.na(recdata$Observed_Loading),"Observed_Loading"]
+  recdata = recdata[recdata$Monitoring.Location.ID==input$recsite&!is.na(recdata$Observed_Loading),"Observed_Loading"]
   if(length(recdata)>0){
     subd=c("Concentration","Loading")
   }else{subd=c("Concentration")}
@@ -627,36 +640,36 @@ recdataset <- reactiveValues()
 observe({
   req(input$rec_unit_type)
   
-  recdataset$aggregdat = workbook$Rec_Season_Data[workbook$Rec_Season_Data$ML_Name==input$recsite,]
+  recdataset$aggregdat = workbook$Rec_Season_Data[workbook$Rec_Season_Data$Monitoring.Location.ID==input$recsite,]
   
   if(input$rec_unit_type=="Concentration"){
-    concdata = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$recsite,]
-    concdata$Year = lubridate::year(concdata$Date)
+    concdata = workbook$Daily_Mean_Data[workbook$Daily_Mean_Data$Monitoring.Location.ID==input$recsite,]
+    concdata$Year = lubridate::year(concdata$Activity.Start.Date)
     concdata$Rec_Season = factor(concdata$Rec_Season, levels = c("Rec Season","Not Rec Season"))
     
     recdataset$data = concdata
     
     # For the table
     aggreg = recdataset$aggregdat
-    concmed = aggregate(E.coli_Geomean~Rec_Season+Year, data = concdata, FUN = median)
-    names(concmed)[names(concmed)=="E.coli_Geomean"] <- "Median"
+    concmed = aggregate(Parameter.Value_Mean~Rec_Season+Year, data = concdata, FUN = median)
+    names(concmed)[names(concmed)=="Parameter.Value_Mean"] <- "Median"
     aggreg1 = merge(aggreg, concmed, all.x = TRUE)
-    aggreg1$E.coli_Geomean = round(aggreg1$E.coli_Geomean, digits = 1)
-    aggreg2 = aggreg1[,c("Year","Rec_Season","Ncount_rec_C","E.coli_Geomean","Median","Percent_Reduction_C")]
-    names(aggreg2) = c("Year","Season","Ncount","Geomean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    aggreg1$Parameter.Value_Mean = round(aggreg1$Parameter.Value_Mean, digits = 1)
+    aggreg2 = aggreg1[,c("Year","Rec_Season","Ncount_rec_C","Parameter.Value_Mean","Median","Percent_Reduction_C")]
+    names(aggreg2) = c("Year","Season","Ncount","Mean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Rec_Data <- renderDT(aggreg2,
                                     rownames = FALSE,selection='none',
                                     options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
   
-  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$ML_Name){
-    loaddat = workbook$LDC_Data[workbook$LDC_Data$ML_Name==input$recsite,]
+  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$Monitoring.Location.ID){
+    loaddat = workbook$LDC_Data[workbook$LDC_Data$Monitoring.Location.ID==input$recsite,]
     
     # Because flow data may be present outside of the time period of ecoli data, ensure loading dataset cut to a date range with both TMDL and observed loading
-    mindate = min(loaddat$Date[!is.na(loaddat$Observed_Loading)])
-    maxdate = max(loaddat$Date[!is.na(loaddat$Observed_Loading)])
-    loaddat = loaddat[loaddat$Date>=mindate&loaddat$Date<=maxdate,]
-    loaddat$Year = lubridate::year(loaddat$Date)
+    mindate = min(loaddat$Activity.Start.Date[!is.na(loaddat$Observed_Loading)])
+    maxdate = max(loaddat$Activity.Start.Date[!is.na(loaddat$Observed_Loading)])
+    loaddat = loaddat[loaddat$Activity.Start.Date>=mindate&loaddat$Activity.Start.Date<=maxdate,]
+    loaddat$Year = lubridate::year(loaddat$Activity.Start.Date)
     
     recdataset$data = loaddat
     
@@ -673,14 +686,14 @@ observe({
     loadmeds = merge(oloadmed, tloadmed, all = TRUE)
     
     # Flatten aggregated data
-    aggreg1 = tidyr::gather(aggreg, key = "Load_Type", value = "Geomean_Loading", Observed_Loading, TMDL)
-    aggreg1 = aggreg1[!is.na(aggreg1$Geomean_Loading),]
+    aggreg1 = tidyr::gather(aggreg, key = "Load_Type", value = "Mean_Loading", Observed_Loading, TMDL)
+    aggreg1 = aggreg1[!is.na(aggreg1$Mean_Loading),]
     
     aggreg2 = merge(aggreg1, loadmeds, all.x = TRUE)
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
-    aggreg3 = aggreg2[,c("Year","Rec_Season","Ncount_rec_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
-    aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
-    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    aggreg3 = aggreg2[,c("Year","Rec_Season","Ncount_rec_L","Load_Type","Mean_Loading","Median","Percent_Reduction_L")]
+    aggreg3$Mean_Loading = round(aggreg3$Mean_Loading, digits = 1)
+    names(aggreg3) = c("Year","Season","Ncount","Load Type","Mean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Rec_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
@@ -690,7 +703,7 @@ observe({
   
 })
 
-output$Rec_Geomeans <- renderPlot({
+output$Rec_Means <- renderPlot({
   req(input$rec_unit_type)
   
   recdata = recdataset$data
@@ -709,7 +722,7 @@ output$Rec_Geomeans <- renderPlot({
     recdata1 = merge(recdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(recdata1$E.coli_Geomean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(recdata1$Parameter.Value_Mean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
@@ -719,12 +732,12 @@ output$Rec_Geomeans <- renderPlot({
     
     # Add data points
     if(input$viewrecdat){
-      points(recdata1$position, recdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(recdata1$position, recdata1$Parameter.Value_Mean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
     }
   
   }
   
-  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$ML_Name){
+  if(input$rec_unit_type=="Loading"&input$recsite%in%workbook$LDC_Data$Monitoring.Location.ID){
     
     recdata2 = recdata[!is.na(recdata$Rec_Season),]
     recdata_flat = tidyr::gather(recdata2, key = "Type", value = "Load", c("TMDL","Observed_Loading"))
@@ -792,7 +805,7 @@ output$Rec_Geomeans <- renderPlot({
 # Sites to choose from
 output$irgsite <- renderUI({
   req(workbook$Irg_Season_Data)
-  irgsites <- unique(workbook$Irg_Season_Data$ML_Name)
+  irgsites <- unique(workbook$Irg_Season_Data$Monitoring.Location.ID)
   selectInput("irgsite",
               label = "Site Name",
               choices=irgsites)
@@ -802,7 +815,7 @@ output$irgsite <- renderUI({
 output$irg_unit_type <- renderUI({
   req(workbook$Irg_Season_Data)
   irgdata <- workbook$Irg_Season_Data
-  irgdata = irgdata[irgdata$ML_Name==input$irgsite&!is.na(irgdata$Observed_Loading),"Observed_Loading"]
+  irgdata = irgdata[irgdata$Monitoring.Location.ID==input$irgsite&!is.na(irgdata$Observed_Loading),"Observed_Loading"]
   if(length(irgdata)>0){
     subd=c("Concentration","Loading")
   }else{subd=c("Concentration")}
@@ -815,36 +828,36 @@ irgdataset <- reactiveValues()
 observe({
   req(input$irg_unit_type)
   
-  irgdataset$aggregdat = workbook$Irg_Season_Data[workbook$Irg_Season_Data$ML_Name==input$irgsite,]
+  irgdataset$aggregdat = workbook$Irg_Season_Data[workbook$Irg_Season_Data$Monitoring.Location.ID==input$irgsite,]
   
   if(input$irg_unit_type=="Concentration"){
-    concdata = workbook$Daily_Geomean_Data[workbook$Daily_Geomean_Data$ML_Name==input$irgsite,]
-    concdata$Year = lubridate::year(concdata$Date)
+    concdata = workbook$Daily_Mean_Data[workbook$Daily_Mean_Data$Monitoring.Location.ID==input$irgsite,]
+    concdata$Year = lubridate::year(concdata$Activity.Start.Date)
     concdata$Irg_Season = factor(concdata$Irg_Season, levels = c("Irrigation Season","Not Irrigation Season"))
     
     irgdataset$data = concdata
     
     # For the table
     aggreg = irgdataset$aggregdat
-    concmed = aggregate(E.coli_Geomean~Irg_Season+Year, data = concdata, FUN = median)
-    names(concmed)[names(concmed)=="E.coli_Geomean"] <- "Median"
+    concmed = aggregate(Parameter.Value_Mean~Irg_Season+Year, data = concdata, FUN = median)
+    names(concmed)[names(concmed)=="Parameter.Value_Mean"] <- "Median"
     aggreg1 = merge(aggreg, concmed, all.x = TRUE)
-    aggreg1$E.coli_Geomean = round(aggreg1$E.coli_Geomean, digits = 1)
-    aggreg2 = aggreg1[,c("Year","Irg_Season","Ncount_irg_C","E.coli_Geomean","Median","Percent_Reduction_C")]
-    names(aggreg2) = c("Year","Season","Ncount","Geomean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    aggreg1$Parameter.Value_Mean = round(aggreg1$Parameter.Value_Mean, digits = 1)
+    aggreg2 = aggreg1[,c("Year","Irg_Season","Ncount_irg_C","Parameter.Value_Mean","Median","Percent_Reduction_C")]
+    names(aggreg2) = c("Year","Season","Ncount","Mean (MPN/100 mL)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Irg_Data <- renderDT(aggreg2,
                                 rownames = FALSE,selection='none',
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
   
-  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$ML_Name){
-    loaddat = workbook$LDC_Data[workbook$LDC_Data$ML_Name==input$irgsite,]
+  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$Monitoring.Location.ID){
+    loaddat = workbook$LDC_Data[workbook$LDC_Data$Monitoring.Location.ID==input$irgsite,]
     
     # Because flow data may be present outside of the time period of ecoli data, ensure loading dataset cut to a date range with both TMDL and observed loading
-    mindate = min(loaddat$Date[!is.na(loaddat$Observed_Loading)])
-    maxdate = max(loaddat$Date[!is.na(loaddat$Observed_Loading)])
-    loaddat = loaddat[loaddat$Date>=mindate&loaddat$Date<=maxdate,]
-    loaddat$Year = lubridate::year(loaddat$Date)
+    mindate = min(loaddat$Activity.Start.Date[!is.na(loaddat$Observed_Loading)])
+    maxdate = max(loaddat$Activity.Start.Date[!is.na(loaddat$Observed_Loading)])
+    loaddat = loaddat[loaddat$Activity.Start.Date>=mindate&loaddat$Activity.Start.Date<=maxdate,]
+    loaddat$Year = lubridate::year(loaddat$Activity.Start.Date)
     
     irgdataset$data = loaddat
     
@@ -861,14 +874,14 @@ observe({
     loadmeds = merge(oloadmed, tloadmed, all = TRUE)
     
     # Flatten aggregated data
-    aggreg1 = tidyr::gather(aggreg, key = "Load_Type", value = "Geomean_Loading", Observed_Loading, TMDL)
-    aggreg1 = aggreg1[!is.na(aggreg1$Geomean_Loading),]
+    aggreg1 = tidyr::gather(aggreg, key = "Load_Type", value = "Mean_Loading", Observed_Loading, TMDL)
+    aggreg1 = aggreg1[!is.na(aggreg1$Mean_Loading),]
     
     aggreg2 = merge(aggreg1, loadmeds, all.x = TRUE)
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
-    aggreg3 = aggreg2[,c("Year","Irg_Season","Ncount_irg_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
-    aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
-    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    aggreg3 = aggreg2[,c("Year","Irg_Season","Ncount_irg_L","Load_Type","Mean_Loading","Median","Percent_Reduction_L")]
+    aggreg3$Mean_Loading = round(aggreg3$Mean_Loading, digits = 1)
+    names(aggreg3) = c("Year","Season","Ncount","Load Type","Mean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
     output$Irg_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
@@ -878,7 +891,7 @@ observe({
   
 })
 
-output$Irg_Geomeans <- renderPlot({
+output$Irg_Means <- renderPlot({
   req(input$irg_unit_type)
   
   irgdata = irgdataset$data
@@ -897,7 +910,7 @@ output$Irg_Geomeans <- renderPlot({
     irgdata1 = merge(irgdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(irgdata1$E.coli_Geomean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgdata1$Parameter.Value_Mean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
@@ -906,12 +919,12 @@ output$Irg_Geomeans <- renderPlot({
     mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
     if(input$viewirgdat){
-      points(irgdata1$position, irgdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(irgdata1$position, irgdata1$Parameter.Value_Mean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
     }
     
   }
   
-  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$ML_Name){
+  if(input$irg_unit_type=="Loading"&input$irgsite%in%workbook$LDC_Data$Monitoring.Location.ID){
     
     irgdata2 = irgdata[!is.na(irgdata$Irg_Season),]
     irgdata_flat = tidyr::gather(irgdata2, key = "Type", value = "Load", c("TMDL","Observed_Loading"))
@@ -981,7 +994,7 @@ output$LDC <- renderPlot({
   req(input$ldcsite)
 
   ldcdata = workbook$LDC_Data
-  x = ldcdata[ldcdata$ML_Name==input$ldcsite,]
+  x = ldcdata[ldcdata$Monitoring.Location.ID==input$ldcsite,]
   flow.plot <- x[order(x$Flow_Percentile),]
   flow.plot$Regime = "Low"
   flow.plot$Regime[flow.plot$Flow_Percentile<=90] = "Dry"
@@ -1000,18 +1013,17 @@ output$LDC <- renderPlot({
   
     
   # Pull out observed loadings (E.coli data)
-  ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
-
-  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(ecoli.loads$Observed_Loading, ecoli.loads$Loading_Capacity))), main=paste("Load Duration Curve:",x$ML_Name[1]))
+  param.loads <- x[!is.na(x$Parameter.Value_Mean),]
+  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(param.loads$Observed_Loading, param.loads$TMDL))), main=paste("Load Duration Curve:",x$Monitoring.Location.ID[1]))
   abline(v=10, lty=2)
   abline(v=40, lty=2)
   abline(v=60, lty=2)
   abline(v=90, lty=2)
-  text(5, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),paste0("High \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="High"],")"))
-  text(25, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Moist \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Moist"],")"))
-  text(50, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Mid-Range \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Mid"],")"))
-  text(75, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading), paste0("Dry \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Dry"],")"))
-  text(95, max(ecoli.loads$Observed_Loading)-.3*max(ecoli.loads$Observed_Loading),paste0("Low \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Low"],")"))
+  text(5, max(param.loads$Observed_Loading)-.3*max(param.loads$Observed_Loading),paste0("High \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="High"],")"))
+  text(25, max(param.loads$Observed_Loading)-.3*max(param.loads$Observed_Loading), paste0("Moist \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Moist"],")"))
+  text(50, max(param.loads$Observed_Loading)-.3*max(param.loads$Observed_Loading), paste0("Mid-Range \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Mid"],")"))
+  text(75, max(param.loads$Observed_Loading)-.3*max(param.loads$Observed_Loading), paste0("Dry \n Conditions \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Dry"],")"))
+  text(95, max(param.loads$Observed_Loading)-.3*max(param.loads$Observed_Loading),paste0("Low \n Flows \n (",flow_exc$`Percent Exceedance`[flow_exc$Regime=="Low"],")"))
   lines(flow.plot$TMDL~flow.plot$Flow_Percentile, col="firebrick3", lwd=2)
 
 
@@ -1019,53 +1031,53 @@ output$LDC <- renderPlot({
 if(input$ldc_type == "Scatterplot"){
   if(input$pt_type=="Calendar Seasons"){
     colpal <- colorspace::sequential_hcl(4)
-    wine <- ecoli.loads[ecoli.loads$CalSeason=="Winter",]
-    spre <- ecoli.loads[ecoli.loads$CalSeason=="Spring",]
-    sume <- ecoli.loads[ecoli.loads$CalSeason=="Summer",]
-    fale <- ecoli.loads[ecoli.loads$CalSeason=="Fall",]
+    wine <- param.loads[param.loads$CalSeason=="Winter",]
+    spre <- param.loads[param.loads$CalSeason=="Spring",]
+    sume <- param.loads[param.loads$CalSeason=="Summer",]
+    fale <- param.loads[param.loads$CalSeason=="Fall",]
     
     
     points(wine$Observed_Loading~wine$Flow_Percentile, pch=21, col="black", bg=colpal[4], cex=2)
     points(spre$Observed_Loading~spre$Flow_Percentile, pch=21, col="black", bg=colpal[3], cex=2)
     points(sume$Observed_Loading~sume$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
     points(fale$Observed_Loading~fale$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
-    legend("topright",legend=c("TMDL", "E.coli Loading - Winter", "E.coli Loading - Spring", "E.coli Loading - Summer","E.coli Loading - Fall"), bty="n", col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "Loading - Winter", "Loading - Spring", "Loading - Summer","Loading - Fall"), bty="n", col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1)
   }
 
   # Point colors
   if(input$pt_type=="Recreation Seasons"){
     colpal <- colorspace::rainbow_hcl(2)
-    rec <- ecoli.loads[ecoli.loads$Rec_Season=="Rec Season",]
-    nonrec <- ecoli.loads[ecoli.loads$Rec_Season=="Not Rec Season",]
+    rec <- param.loads[param.loads$Rec_Season=="Rec Season",]
+    nonrec <- param.loads[param.loads$Rec_Season=="Not Rec Season",]
     
     points(rec$Observed_Loading~rec$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonrec$Observed_Loading~nonrec$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("TMDL","E.coli Loading - Rec", "E.coli Loading - Non-Rec"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL","Loading - Rec", "Loading - Non-Rec"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
     
   }
   
   if(input$pt_type=="Irrigation Seasons"){
     colpal <- colorspace::terrain_hcl(2)
-    irg <- ecoli.loads[ecoli.loads$Irg_Season=="Irrigation Season",]
-    nonirg <- ecoli.loads[ecoli.loads$Irg_Season=="Not Irrigation Season",]
+    irg <- param.loads[param.loads$Irg_Season=="Irrigation Season",]
+    nonirg <- param.loads[param.loads$Irg_Season=="Not Irrigation Season",]
     
     points(irg$Observed_Loading~irg$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonirg$Observed_Loading~nonirg$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("TMDL", "E.coli Loading - Irrigation", "E.coli Loading - No Irrigation"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "Loading - Irrigation", "Loading - No Irrigation"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
     
   }
 }else{
   colpal <- colorspace::sequential_hcl(4)
   # Add boxplots
-  ecoli.loads$Flow_Cat = "High"
-  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>10&ecoli.loads$Flow_Percentile<=40] = "Moist"
-  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>40&ecoli.loads$Flow_Percentile<=60] = "MidRange"
-  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>60&ecoli.loads$Flow_Percentile<=90] = "Dry"
-  ecoli.loads$Flow_Cat[ecoli.loads$Flow_Percentile>90&ecoli.loads$Flow_Percentile<=100] = "Low"
-  ecoli.loads$Flow_Cat = factor(ecoli.loads$Flow_Cat, levels= c("High","Moist", "MidRange","Dry","Low"))
+  param.loads$Flow_Cat = "High"
+  param.loads$Flow_Cat[param.loads$Flow_Percentile>10&param.loads$Flow_Percentile<=40] = "Moist"
+  param.loads$Flow_Cat[param.loads$Flow_Percentile>40&param.loads$Flow_Percentile<=60] = "MidRange"
+  param.loads$Flow_Cat[param.loads$Flow_Percentile>60&param.loads$Flow_Percentile<=90] = "Dry"
+  param.loads$Flow_Cat[param.loads$Flow_Percentile>90&param.loads$Flow_Percentile<=100] = "Low"
+  param.loads$Flow_Cat = factor(param.loads$Flow_Cat, levels= c("High","Moist", "MidRange","Dry","Low"))
   
-  boxplot(ecoli.loads$Observed_Loading~ecoli.loads$Flow_Cat, col=ggplot2::alpha(boxcolors[2],0.7), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
-  legend("topright",legend=c("TMDL", "E.coli Loading"), bty="n", col=c("firebrick3","black"), lty=c(1,NA),lwd=c(2,NA),pch=c(NA,22), pt.bg=c(NA,ggplot2::alpha(boxcolors[2],0.7)), pt.cex=c(NA,2),cex=1)
+  boxplot(param.loads$Observed_Loading~param.loads$Flow_Cat, col=ggplot2::alpha(boxcolors[2],0.7), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
+  legend("topright",legend=c("TMDL", "Observed Loading"), bty="n", col=c("firebrick3","black"), lty=c(1,NA),lwd=c(2,NA),pch=c(NA,22), pt.bg=c(NA,ggplot2::alpha(boxcolors[2],0.7)), pt.cex=c(NA,2),cex=1)
   
   }
   
@@ -1086,15 +1098,15 @@ shinyApp(ui = ui, server = server)
 # out$cf = out$Inputs[out$Inputs$Parameter=="Correction Factor","Value"]
 # out$mos = out$Inputs[out$Inputs$Parameter=="Margin of Safety","Value"]
 
-# output$Monthly_Geomeans <- renderPlotly({
+# output$Monthly_Means <- renderPlotly({
 #   req(selectedmonthdata$seldg)
 #   y = selectedmonthdata$seldg
 #   y = droplevels(y[order(y$month),])
-#   monthmed = tapply(y$E.coli_Geomean, y$month, median)
+#   monthmed = tapply(y$Parameter.Value_Mean, y$month, median)
 #   monthmed_pos = rep(max(monthmed)*-0.05, length(monthmed))
-#   monthn_count = tapply(y$E.coli_Geomean, y$month, length)
-#   month_geomean = tapply(y$E.coli_Geomean, y$month, function(x){exp(mean(log(x)))})
-#   perc_red = ifelse(month_geomean>crits$geomcrit,round(perc.red(crits$geomcrit,month_geomean), digits=0),0)
+#   monthn_count = tapply(y$Parameter.Value_Mean, y$month, length)
+#   month_Mean = tapply(y$Parameter.Value_Mean, y$month, function(x){exp(mean(log(x)))})
+#   perc_red = ifelse(month_Mean>crits$geomcrit,round(perc.red(crits$geomcrit,month_Mean), digits=0),0)
 #   # Add criteria
 #   geom = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$geomcrit, y1 = crits$geomcrit, line=list(dash='dot', color = "orange", width=2))
 #   max = list(type = 'line', x0 = -1, x1 = length(monthmed_pos), y0 = crits$maxcrit, y1 = crits$maxcrit, line=list(dash='dot', color = "red", width=2))
@@ -1111,7 +1123,7 @@ shinyApp(ui = ui, server = server)
 #   for (i in c(0:(length(monthmed_pos)-1))) {
 #     line[["x0"]] <- i-0.25
 #     line[["x1"]] <- i + 0.25
-#     line[c("y0", "y1")] <- month_geomean[i+1]
+#     line[c("y0", "y1")] <- month_Mean[i+1]
 #     lines <- c(lines, list(line))
 #   }
 #   
@@ -1131,20 +1143,20 @@ shinyApp(ui = ui, server = server)
 #   # add = droplevels(add[order(add$month),])
 #   #barcolors = piratepal(palette="up")
 #   if(input$mon_unit_type=="Concentration"){
-#     month_c = plot_ly(x =~y$month, y =~y$E.coli_Geomean,  type ="box", boxpoints = "outliers")%>%
+#     month_c = plot_ly(x =~y$month, y =~y$Parameter.Value_Mean,  type ="box", boxpoints = "outliers")%>%
 #       layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), shapes = lines)%>%
 #       add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)
 #     month_c
 #       # # Straight bar plot - concentrations
-#     # uplim = max(x$E.coli_Geomean)*1.2
-#     # mo_conc.p <- x$E.coli_Geomean
+#     # uplim = max(x$Parameter.Value_Mean)*1.2
+#     # mo_conc.p <- x$Parameter.Value_Mean
 #     # barp <- barplot(mo_conc.p, main = "Monthly E.coli Concentration Geomeans", ylim=c(0, uplim), names.arg = x$month,ylab="E.coli Concentration (MPN/100 mL)",col=barcolors[1])
 #     # legend("topright",legend=c("Geomean Standard", "% Reduction Needed"), bty="n", fill=c("white","white"), border=c("white","white"),lty=c(1,NA),lwd=c(2,NA),cex=1)
 #     # box(bty="l")
 #     # abline(h=crits$geomcrit, col="black", lwd=2)
 #     # ncount = paste0("n=",x$Ncount)
 #     # mtext(ncount, side = 1, line = 0, cex=0.8, at = barp)
-#     # barperc <- data.frame(cbind(barp,x$E.coli_Geomean, x$Percent_Reduction))
+#     # barperc <- data.frame(cbind(barp,x$Parameter.Value_Mean, x$Percent_Reduction))
 #     # barperc <- barperc[barperc$X3>0,]
 #     # if(dim(barperc)[1]>0){
 #     #   barperc$X4 <- paste(barperc$X3,"%",sep="")
@@ -1156,7 +1168,7 @@ shinyApp(ui = ui, server = server)
 #     #   y = droplevels(y[order(y$month),])
 #     # 
 #     #   # Get axes right to accommodate boxplot overlay (if checkbox checked)
-#     #   uplim1 = quantile(y$E.coli_Geomean,1)
+#     #   uplim1 = quantile(y$Parameter.Value_Mean,1)
 #     #   uplim1 = max(uplim, uplim1)
 #     # 
 #     #   # Bar plot
@@ -1168,7 +1180,7 @@ shinyApp(ui = ui, server = server)
 #     # 
 #     #   # x-axis arguments for boxplot based on barplot placement
 #     # 
-#     #   boxplot(y$E.coli_Geomean~y$month,
+#     #   boxplot(y$E.coli_Mean~y$month,
 #     #           lty=1, xaxt="n", frame=FALSE, col=ggplot2::alpha(barcolors[1],0.1), boxwex = 0.7, at=barp[,1], add=TRUE)
 #     # }
 #   }
@@ -1231,8 +1243,8 @@ shinyApp(ui = ui, server = server)
 #   }
 # })
 
-# month_c = plot_ly(x =~y$month, y =~y$E.coli_Geomean,  type ="box", name = "Monthly Concentrations",boxpoints = "outliers")%>%
-#   #add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
+# month_c = plot_ly(x =~y$month, y =~y$E.coli_Mean,  type ="box", name = "Monthly Concentrations",boxpoints = "outliers")%>%
+#   #add_trace(x = month_Mean_df$month, y = month_Mean_df$E.coli_Mean, name = "Monthly Geomean", line = list(color = "gold"))%>%
 #   layout(xaxis = list(title = ""), yaxis = list(title = "E.coli Concentration (MPN/100 mL)"),font = list(family = "Arial, sans-serif"), xaxis2 = list(overlaying = "x", showticklabels = FALSE, showline = FALSE))%>%
 #   add_trace(x = ~c(0,1), y = ~c(crits$maxcrit, crits$maxcrit), type = "scatter", mode = "lines", name = "Max Crit", xaxis = "x2", line = list(color = "green", dash = "dot"))%>%
 #   add_trace(x = ~c(0,1), y = ~c(crits$geomcrit, crits$geomcrit), type = "scatter", mode = "lines", name = "Geomean Crit", xaxis = "x2", line = list(color = "red", dash = "dot")) #%>%
@@ -1242,14 +1254,14 @@ shinyApp(ui = ui, server = server)
 #           month_l = plot_ly(x =~monloads_flat$month, y =~monloads_flat$Loading,  color = ~monloads_flat$Load_Type, type ="box", boxpoints = "outliers")%>%
 #             layout(boxmode = "group", xaxis = list(title = ""), yaxis = list(title = "E.coli Loading (GigaMPN/day)"),font = list(family = "Arial, sans-serif"), xaxis2 = list(overlaying = "x", showticklabels = FALSE, showline = FALSE)) #%>%
 #           #add_trace(x = ~mloadgeomean$month, y = ~mloadgeomean$Loading, color = ~mloadgeomean$Load_Type, xaxis = "x2", line = list(color = "gold"))
-#add_trace(x = month_geomean_df$month, y = month_geomean_df$E.coli_Geomean, name = "Monthly Geomean", line = list(color = "gold"))%>%
+#add_trace(x = month_Mean_df$month, y = month_Mean_df$E.coli_Mean, name = "Monthly Geomean", line = list(color = "gold"))%>%
 #add_annotations(x = 0:(length(monthmed_pos)-1), y = monthmed_pos, text = paste("n =",monthn_count), showarrow = FALSE)%>%
 #add_annotations(x = perc_red_df$xpos, y = perc_red_df$ypos, text = paste0(perc_red_df$perc_red,"%"), showarrow = FALSE, font = list(size = 9))
 
 
 # What data to show in table
 # observe({
-#   req(workbook$Daily_Geomean_Data)
+#   req(workbook$Daily_Mean_Data)
 #   if(!is.null(timeseriesdat$x1)){
 #     ecoli_ts = timeseriesdat$x
 #     flow_ts = timeseriesdat$x1

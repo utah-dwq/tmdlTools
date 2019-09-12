@@ -1,6 +1,6 @@
 #' Run TMDL Shiny App Browser
 #' 
-#' Launches E.coli Data Explorer shinyapp.
+#' Launches TMDL Data Explorer shinyapp.
 #' @export runTMDLApp
 #' @import DT
 #' @import shinyjs

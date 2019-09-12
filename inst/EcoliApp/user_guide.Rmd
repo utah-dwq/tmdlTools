@@ -1,0 +1,63 @@
+---
+output: html_document
+runtime: shiny
+---
+
+## Welcome!
+
+Thank you for your interest in using the *E.coli* data visualization tool. Deployed as a Shiny application, this tool is intended to assist Environmental Coordinators and Managers with total maximum daily load (TMDL) development under the EPA's [Clean Water Act](https://www.epa.gov/laws-regulations/summary-clean-water-act). Users may study time series plots, compare between sites, and ascertain which sites exceed water quality standards at what time(s) of year. Peruse this guide for more information on the plots displayed and their functionality within the app. Originally produced for the Utah Department of Environmental Quality's [Division of Water Quality](https://deq.utah.gov/division-water-quality).
+
+### General Tips
+
+**Navigation**
+Use the tabs along the top of the page to navigate between plotting tools. Note that each page is independent from the others. Toggling between sites on one page does not affect the visualizations available on other tabs.
+
+**Saving Plots**
+To download a plot for later use, right click the plot and click "Save Image". Navigate to the appropriate folder, and provide an applicable name followed by the file extension (".jpg" or ".pdf").
+
+**Boxplots** 
+On the Monthy, Rec/Non-Rec Season, and Irrigation/Non-Irrigation Season tabs, data are displayed as boxplots. The boxplots are an indicator of the spread of the data, and allow the user to see outliers and the range of the data.  The lower whisker of each boxplot represents the lowest value within 2 x the interquartile range, while the upper whisker represents the highest value within 2 x the interquartile range. The top and bottom edges of each box indicate the 75th and 25th percentiles, respectively. Boxes without whiskers indicate only 2 data points exist, and median lines without a box indicate only 1 data point exists. Check the "View data points?" checkbox to overlay the data points composing each boxplot.
+
+**Select Measurement Type**
+On tabs displaying bar plots, the user may select whether they would like the plots to show concentration or loading data. Sites lacking flow (and thus loading) data will not have this functionality, and "Loading" will not be listed as an option in the drop down menu.
+
+### Upload Data
+
+First, the user must upload their data file for use in the visualization tools. The app is expecting an Excel workbook with four tabs: Inputs, Site_order, Ecoli_data, and Flow_data. It will also accommodate other tabs within the workbook. The app will then ask if the user wants to run the *tmdlCalcs* function, which calculates daily geometric means and loadings from the concentration and flow data. After reacting to the tmdlCalcs question, this tab produces data tables for the user to review and verify before moving forward to the visualization steps. The tool also allows the user to download the dataset.
+ 
+
+### Time Series
+
+Within the time series plot, users can compare *E.coli* concentrations and stream flows at different sites through time. Toggling from a "Point" plot type to a "Line" plot type connects the individual measurements for each site to provide a more cohesive picture of concentration changes over time. However, line plots can become busy if many sites are included on the graph.
+
+Use the date range slider widget to focus on particular years or seasons. Changing the date range also changes the number of points exceeding the maximum criterion, which is reflected in the plot legend.
+
+### Upstream-Downstream
+
+The upstream-downstream plot shows the range of the data for each site over the dates specified, starting with the highest site and ending with the lowest site. The dotted lines show the max and geometric mean criteria referenced from the Input tab. Like the time series plots, the upstream-downstream plot only shows concentrations.
+
+### Monthly
+
+Monthly barplots display the geometric mean *E.coli* concentrations/loadings calculated using the date range specified (defaults to all available data). Note that the horizontal line plotted in all graphs is the geometric mean standard, and the percentage reported above certain bars represents the percent reduction needed to meet the geometric mean standard. Also be aware that quartiles may reveal points that fall above the geomean standard but are not consistent enough to push the geometric mean of the data above the standard. Selecting date ranges containing no measurements will trigger an error message.
+
+### Rec/Non-Rec Season
+
+Barplots on this tab compare annual rec/non-rec season geomeans to one another across years. While selecting the concentration input yields only one graph, the loading input will produce two graphs, which separate recreation and non-recreation season data. This makes it easier to compare observed loading data to loading capacity. However, y-axis limits are identical in both plots to allow for easy comparison between recreation and non-recreation seasons.
+
+### Irrigation/Non-Irrigation Seasons
+
+Barplots in this tab compare annual irrigation/non-irrigation season geomeans to one another across years, and function exactly as in the rec/non-rec season tab.
+
+### Load Duration Curves
+
+This tab only appears when the dataset contains loading data and constructs a load duration curve plot. The plot overlays *E.coli* loadings on loading capacities, ordered based on flow percentile. Observed loading points populating the left side of the graph occur at high flows, while loadings populating the right side of the graph occur at low flows. Observed loadings are categorized as "exceeding" when they are located above the TMDL line. 
+
+Use the "Data Category" drop down menu to specify whether the loading points are categorized by calendar seasons, rec/non-rec seasons, and irrigation/non-irrigation seasons. Changing the drop-down selection will change the color of the points (but not their positions!) and provides insights toward the times of year in which exceedances are observed.
+
+## Questions?
+
+Contact Elise Hinman in the Division of Water Quality, Utah Department of Environmental Quality, at ehinman@utah.gov.
+
+## Acknowledgments
+
+Huge thank you to Jake Vander Laan within the Division of Water Quality for programming tips and patience discussing all things Shiny and R. Additional gratitude goes out to Jodi Gardberg, Amy Dickey, Sandy Wingert, and Lucy Parham for feedback on the application and its usefulness in drafting TMDLs. Finally, can't miss the giant community of amateur and professional programmers on Stack Overflow and GitHub, RStudio.com and its many help forums, DataCamp, and Data Science YouTube channels.
