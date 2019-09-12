@@ -317,8 +317,10 @@ observe({
     timeseriesdat$min = input$tsdatrange[1]
     timeseriesdat$max = input$tsdatrange[2] 
   }
-  timeseriesdat$x <- x[x$Activity.Start.Date>=timeseriesdat$min&x$Activity.Start.Date<=timeseriesdat$max,]
-  
+  x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
+  if(dim(x)[1]>0){
+    timeseriesdat$x = x
+  }else{timeseriesdat$x = NULL}  
 })
 
 # Create flow dataset 
@@ -326,8 +328,10 @@ observe({
   req(input$checkbox1)
   x1 = workbook$Flow_data
   x1 = x1[x1$Monitoring.Location.ID %in% input$checkbox1,]
-  timeseriesdat$x1 <- x1[x1$Activity.Start.Date>=timeseriesdat$min&x1$Activity.Start.Date<=timeseriesdat$max,]
-})
+  x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
+  if(dim(x1)[1]>0){
+    timeseriesdat$x1 = x1
+  }else{timeseriesdat$x1 = NULL}})
 
 output$Time_Series <- renderPlot({
   req(timeseriesdat$min,timeseriesdat$max)
@@ -336,6 +340,8 @@ output$Time_Series <- renderPlot({
   max = timeseriesdat$max
   units = paste0(workbook$Daily_Mean_Data$Parameter.Name[1]," (",workbook$Daily_Mean_Data$Parameter.Unit[1],")")
   max_y = max(timeseriesdat$x$Parameter.Value)
+  
+  par(mar=c(5.1,4.1,4.1,4.1))
   
 # Base plot  
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
@@ -349,7 +355,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
 }
 
 # Parameter plots
-  if(!is.null(input$checkbox)){
+  if(!is.null(timeseriesdat$x)){
     x = timeseriesdat$x
     # Get number of sites
     uni.sites <- unique(x$Monitoring.Location.ID)
@@ -370,7 +376,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   }
   
 # Flow plots
-  if(!is.null(input$checkbox1)){
+  if(!is.null(timeseriesdat$x1)){
     x1 = timeseriesdat$x1
     x1$Result.Value = as.numeric(x1$Result.Value)
     uni.sites.1 = unique(x1$Monitoring.Location.ID)

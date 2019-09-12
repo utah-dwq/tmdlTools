@@ -314,8 +314,10 @@ observe({
     timeseriesdat$min = input$tsdatrange[1]
     timeseriesdat$max = input$tsdatrange[2] 
   }
-  timeseriesdat$x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
-  
+  x <- x[x$Date>=timeseriesdat$min&x$Date<=timeseriesdat$max,]
+  if(dim(x)[1]>0){
+    timeseriesdat$x = x
+  }else{timeseriesdat$x = NULL}
 })
 
 # Create flow dataset 
@@ -323,7 +325,10 @@ observe({
   req(input$checkbox1)
   x1 = workbook$Flow_data
   x1 = x1[x1$ML_Name %in% input$checkbox1,]
-  timeseriesdat$x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
+  x1 <- x1[x1$Date>=timeseriesdat$min&x1$Date<=timeseriesdat$max,]
+  if(dim(x1)[1]>0){
+    timeseriesdat$x1 = x1
+  }else{timeseriesdat$x1 = NULL}
 })
 
 output$Time_Series <- renderPlot({
@@ -332,6 +337,8 @@ output$Time_Series <- renderPlot({
   min = timeseriesdat$min
   max = timeseriesdat$max
 
+  par(mar=c(5.1,4.1,4.1,4.1))
+  
 # Base plot  
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
@@ -344,7 +351,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
 }
 
 # E.coli plots
-  if(!is.null(input$checkbox)){
+  if(!is.null(timeseriesdat$x)){
     x = timeseriesdat$x
     # Get number of sites
     uni.sites <- unique(x$ML_Name)
@@ -365,7 +372,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   }
   
 # Flow plots
-  if(!is.null(input$checkbox1)){
+  if(!is.null(timeseriesdat$x1)){
     x1 = timeseriesdat$x1
     uni.sites.1 = unique(x1$ML_Name)
     site1 = vector()
