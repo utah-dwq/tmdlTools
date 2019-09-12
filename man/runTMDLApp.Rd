@@ -7,5 +7,5 @@
 runTMDLApp()
 }
 \description{
-Launches E.coli Data Explorer shinyapp.
+Launches TMDL Data Explorer shinyapp.
 }
