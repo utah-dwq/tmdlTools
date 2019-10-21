@@ -16,7 +16,8 @@ source("tmdlCalcs.R")
 
 perc.red <- function(x,y){100-x/y*100}
 deqPalette <- c("#0080b7","#00afd8","#ADD361")
-dwqPalette <- c("#034963","#0b86a3","#00a1c6")
+#dwqPalette <- c("#034963","#0b86a3","#00a1c6")
+dwqPalette <- c("#febb12","#0b86a3","#62bc99")
 boxcolors = dwqPalette
 linecolors = deqPalette
 
@@ -41,7 +42,7 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
-                                                  br(),
+                                                  checkboxInput("perc_exc", label = strong("Show % exceedance of max criterion by site?"),value = FALSE),
                                                   br(),
                                                   uiOutput("checkbox"),
                                                   br(),
@@ -55,7 +56,8 @@ ui <- fluidPage(title="E.coli Data Explorer",
                                      h5("Use the date range slider to select the period of record over which to view ",em("E.coli"), " concentrations. The red dotted line in the boxplot represents the maximum",em("E.coli"), "concentration criterion, while the orange dotted line represents the geometric mean criterion."),
                                      sidebarPanel(uiOutput("usds_site"),
                                                   uiOutput("usds_date"),
-                                                  checkboxInput("vieworddat", label = "View data points?")),
+                                                  checkboxInput("rec_only", label = strong("Rec season data only")),
+                                                  checkboxInput("vieworddat", label = strong("View data points"))),
                                      mainPanel(plotOutput("UD_Geomeans", height="700px"))),
                             tabPanel("Monthly",
                                      h3("Bacterial Concentrations/Loadings by Month"),
@@ -344,8 +346,8 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
   plot(1, type="n", xlab="", ylab="MPN/100 mL", xaxt="n", xlim=c(min, max), ylim=c(0, 2420))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=crits$maxcrit,col="orange", lwd=2)
-  abline(h=crits$geomcrit, col="red", lwd=2)
+  abline(h=crits$maxcrit,col="red", lwd=2)
+  abline(h=crits$geomcrit, col="orange", lwd=2)
   site = vector()
   colr = vector()
 }
@@ -365,10 +367,13 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
         lines(y$E.coli_Geomean~y$Date, lwd=1, lty=1, col=concol)
       }
       points(y$E.coli_Geomean~y$Date, pch=21, cex=2, col="black", bg=concol)
-      site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
+      if(input$perc_exc){
+        site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
+      }else{site[i] = as.character(uni.sites[i])}
+      
       colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"),paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL")),col=c(rep("black",length(colr)),"orange","red"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
+    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit," MPN/100 mL"),paste0("Geometric Mean Crit - ",crits$geomcrit," MPN/100 mL")),col=c(rep("black",length(colr)),"red","orange"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
   }
   
 # Flow plots
@@ -427,8 +432,8 @@ output$UD_Geomeans <- renderPlot({
   selgeomeans <- geomeans[geomeans$Date>=input$usdsdate[1]&geomeans$Date<=input$usdsdate[2],]
   usds_data = merge(selgeomeans, siteord, all.x = TRUE)
   usds_data$ML_Name = factor(usds_data$ML_Name, levels = c(as.character(siteord$ML_Name)))
+  if(input$rec_only){usds_data = subset(usds_data, usds_data$Rec_Season=="Rec Season")}
   udn_count = tapply(usds_data$E.coli_Geomean, usds_data$ML_Name, length)
-  
   boxplot(usds_data$E.coli_Geomean~usds_data$ML_Name, ylab = "E.coli (MPN/100 mL)", xlab = "",ylim = c(-50, max(usds_data$E.coli_Geomean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
   abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
   abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
@@ -438,7 +443,7 @@ output$UD_Geomeans <- renderPlot({
   text(x = 1:length(unique(usds_data$ML_Name)), y = rep(-40, length(unique(usds_data$ML_Name))), paste0("n=",udn_count), cex = 0.8)
   # add data points
   if(input$vieworddat){
-    points(usds_data$Order, usds_data$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
+    points(usds_data$Order, usds_data$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
   }
   
   })
@@ -551,7 +556,7 @@ observe({
     table = aggseldg2
     table = table[order(table$Load_Type, table$month),c("month","Load_Type","Ncount","Geomean_Loading","Median_Loading","Percent_Reduction")]
     output$Monthly_Data <- renderDT(table,
-                                    colnames = c("Month","Load Type","Ncount","Geomean (MPN/day)","Median (MPN/day)","Reduction Needed (%)"),
+                                    colnames = c("Month","Load Type","Ncount","Geomean (GigaMPN/day)","Median (GigaMPN/day)","Reduction Needed (%)"),
                                     rownames = FALSE,selection='none',filter="top",
                                     options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
   }
@@ -576,7 +581,7 @@ output$Monthly_Geomeans <- renderPlot({
         
         # add data points
         if(input$viewmondat){
-          points(y$position, y$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[1])
+          points(y$position, y$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
         }
       }
       if(input$mon_unit_type=="Loading"&input$monthsite%in%workbook$LDC_Data$ML_Name){
@@ -595,9 +600,9 @@ output$Monthly_Geomeans <- renderPlot({
         # data frame with all loading data and their positions 
         pointpos = merge(monloads_flat, repmons, all.x = TRUE)
         
-        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = "Loading (MPN/day)", xlab = "",col = boxcolors[1:2], lty = 1, outline = FALSE)
+        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = "Loading (GigaMPN/day)", xlab = "",col = boxcolors[1:2], lty = 1, outline = FALSE)
         axis(side = 1, at = monlab_pos,labels = month.abb)
-        legend("topright",legend = c("TMDL","Observed Loading"), pch = c(15,15), col = c(boxcolors[1],boxcolors[2]), pt.bg = "black", pt.cex = 1.5, bty = "n")
+        legend("topright",legend = c("TMDL","Observed Loading"), pch = c(22,22), col = "black", pt.bg = c(boxcolors[1],boxcolors[2]), pt.cex = 1.5, bty = "n")
         mtext(paste0("n=",selectedmonthdata$aggregdata$Ncount), side = 1, line = 3, at = where, cex= 0.7)
         
         if(input$viewmondat){
@@ -687,7 +692,7 @@ observe({
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
     aggreg3 = aggreg2[,c("Year","Rec_Season","Ncount_rec_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
     aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
-    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (GigaMPN/day)", "Median (GigaMPN/day)", "Percent Reduction (%)")
     output$Rec_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
@@ -716,17 +721,17 @@ output$Rec_Geomeans <- renderPlot({
     recdata1 = merge(recdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(recdata1$E.coli_Geomean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(recdata1$E.coli_Geomean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[1:2], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[1],boxcolors[2],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_rec_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     
     # Add data points
     if(input$viewrecdat){
-      points(recdata1$position, recdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(recdata1$position, recdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
   
   }
@@ -773,21 +778,21 @@ output$Rec_Geomeans <- renderPlot({
     
     par(mfrow = c(1,2))
     
-    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = "Loading (GigaMPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[c(1,3)], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
-    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[1],boxcolors[2],boxcolors[3]), col = c("black","black", "black"),bty = "n")
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_rec_L), cex = 0.8)
     
     if(input$viewrecdat){
-      points(recl$position, recl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(recl$position, recl$Load, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
     
-    boxplot(nrecl$Load~nrecl$Type+nrecl$Year, at = positions2, main = "Not Rec Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(3,1)], lty = 1, outline = FALSE)
+    boxplot(nrecl$Load~nrecl$Type+nrecl$Year, at = positions2, main = "Not Rec Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(2,3)], lty = 1, outline = FALSE)
     axis(1, at = yearlab2$position, label = yearlab2$Year)
     text(aggyear2$position,rep(-10, length(aggyear2$position)), labels = paste("n =",aggyear2$Ncount_rec_L), cex = 0.8)
   
     if(input$viewrecdat){
-      points(nrecl$position, nrecl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(nrecl$position, nrecl$Load, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
     
     }
@@ -875,7 +880,7 @@ observe({
     aggreg2$Percent_Reduction_L[aggreg2$Load_Type=="TMDL"] <- "Not applicable"
     aggreg3 = aggreg2[,c("Year","Irg_Season","Ncount_irg_L","Load_Type","Geomean_Loading","Median","Percent_Reduction_L")]
     aggreg3$Geomean_Loading = round(aggreg3$Geomean_Loading, digits = 1)
-    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (MPN/day)", "Median (MPN/100 mL)", "Percent Reduction (%)")
+    names(aggreg3) = c("Year","Season","Ncount","Load Type","Geomean (GigaMPN/day)", "Median (GigaMPN/day)", "Percent Reduction (%)")
     output$Irg_Data <- renderDT(aggreg3,
                                 rownames = FALSE,selection='none',filter="top",
                                 options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
@@ -904,16 +909,16 @@ output$Irg_Geomeans <- renderPlot({
     irgdata1 = merge(irgdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(irgdata1$E.coli_Geomean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgdata1$E.coli_Geomean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[1:2], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
     abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[1],boxcolors[2],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
     if(input$viewirgdat){
-      points(irgdata1$position, irgdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(irgdata1$position, irgdata1$E.coli_Geomean, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
     
   }
@@ -960,21 +965,21 @@ output$Irg_Geomeans <- renderPlot({
     
     par(mfrow = c(1,2))
     
-    boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = "Loading (GigaMPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[c(1,3)], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
-    legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[1],boxcolors[2],boxcolors[3]), col = c("black","black", "black"),bty = "n")
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_irg_L), cex = 0.8)
     
     if(input$viewirgdat){
-      points(irgl$position, irgl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(irgl$position, irgl$Load, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
     
-    boxplot(nirgl$Load~nirgl$Type+nirgl$Year, at = positions2, main = "Not Irrigation Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(3,1)], lty = 1, outline = FALSE)
+    boxplot(nirgl$Load~nirgl$Type+nirgl$Year, at = positions2, main = "Not Irrigation Season", xaxt = "n", xlab = "", ylim = c(0,plotrange[2]),ylab = "",col = boxcolors[c(2,3)], lty = 1, outline = FALSE)
     axis(1, at = yearlab2$position, label = yearlab2$Year)
     text(aggyear2$position,rep(-10, length(aggyear2$position)), labels = paste("n =",aggyear2$Ncount_irg_L), cex = 0.8)
     
     if(input$viewirgdat){
-      points(nirgl$position, nirgl$Load, pch = 22, cex = 1.2, col = "black", bg = linecolors[1])
+      points(nirgl$position, nirgl$Load, pch = 22, cex = 1.2, col = "black", bg = boxcolors[3])
     }
     
   }
@@ -1009,7 +1014,7 @@ output$LDC <- renderPlot({
   # Pull out observed loadings (E.coli data)
   ecoli.loads <- x[!is.na(x$E.coli_Geomean),]
 
-  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(ecoli.loads$Observed_Loading, ecoli.loads$Loading_Capacity))), main=paste("Load Duration Curve:",x$ML_Name[1]))
+  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="E.coli Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(ecoli.loads$Observed_Loading, ecoli.loads$TMDL))), main=paste("Load Duration Curve:",x$ML_Name[1]))
   abline(v=10, lty=2)
   abline(v=40, lty=2)
   abline(v=60, lty=2)
