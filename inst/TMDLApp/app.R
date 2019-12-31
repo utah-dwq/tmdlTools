@@ -129,6 +129,7 @@ server <- function(input, output) {
 
  observeEvent(input$loadcalcs,{
    disable("loadcalcs")
+   disable("crit")
  })
 
 # Download button that shows after sheet widget
@@ -247,15 +248,27 @@ output$ldcsite <- renderUI({
               choices=loadsites)
 })
 
-## Save Criteria in own reactive values for use in all plots ##
-crits <- reactiveValues()
+# Create an object for storing unit information for plots
+plotstuffs <- reactiveValues()
 
 observe({
-  req(workbook$Inputs)
-  inputs <- workbook$Inputs
-  crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
-  crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
+  req(workbook$Daily_Mean_Data)
+  plotstuffs$concunit = paste0(workbook$Daily_Mean_Data$Parameter.Name[1]," (",workbook$Daily_Mean_Data$Parameter.Unit[1],")")
 })
+
+observe({
+  req(workbook$LDC_Data)
+  plotstuffs$ldcunit = paste0(workbook$LDC_Data$Parameter.Name[1]," (",workbook$LDC_Data$Unit[1],")")
+})
+## Save Criteria in own reactive values for use in all plots ##
+# crits <- reactiveValues()
+# 
+# observe({
+#   req(workbook$Inputs)
+#   inputs <- workbook$Inputs
+#   crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
+#   crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
+# })
 
 ################################# TIME SERIES SECTION ########################################
 
@@ -340,7 +353,6 @@ output$Time_Series <- renderPlot({
   colrs = timeseriesdat$sitecols
   min = timeseriesdat$min
   max = timeseriesdat$max
-  units = paste0(workbook$Daily_Mean_Data$Parameter.Name[1]," (",workbook$Daily_Mean_Data$Parameter.Unit[1],")")
   if(is.null(timeseriesdat$x)){
     max_y = max(workbook$Daily_Mean_Data$Parameter.Value)
   }else{max_y = max(timeseriesdat$x$Parameter.Value)}
@@ -351,10 +363,9 @@ output$Time_Series <- renderPlot({
 # Base plot  
 if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
-  plot(1, type="n", xlab="", ylab=units, xaxt="n", xlim=c(min, max), ylim=c(0, max_y))
+  plot(1, type="n", xlab="", ylab=plotstuffs$concunit, xaxt="n", xlim=c(min, max), ylim=c(0, max_y))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=crits$maxcrit,col="orange", lwd=2)
-  abline(h=crits$geomcrit, col="red", lwd=2)
+  abline(h=input$crit, col="red", lwd=2)
   site = vector()
   colr = vector()
 }
@@ -369,7 +380,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     for(i in 1:length(uni.sites)){
       concol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites[i]])
       y = x[x$Monitoring.Location.ID==uni.sites[i],]
-      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(crits$maxcrit)])/length(y$Parameter.Value_Mean)*100, digits=0)
+      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit)])/length(y$Parameter.Value_Mean)*100, digits=0)
       if(input$plottype=="Line"){
         lines(y$Parameter.Value_Mean~y$Activity.Start.Date, lwd=1, lty=1, col=concol)
       }
@@ -377,7 +388,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Max Crit - ",crits$maxcrit),paste0("Geometric Mean Crit - ",crits$geomcrit)),col=c(rep("black",length(colr)),"orange","red"),lwd=c(rep(NA,length(colr)),2,2),pt.bg=c(colr,NA,NA), pch=c(rep(21,length(colr)),NA,NA), bty="n", pt.cex=c(rep(2,length(colr)),NA,NA),cex=1)
+    l=legend("topleft",c(site,paste0("Criterion - ",input$crit)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), bty="n", pt.cex=c(rep(2,length(colr)),NA),cex=1)
   }
   
 # Flow plots
@@ -439,10 +450,9 @@ output$UD_Means <- renderPlot({
   usds_data$Monitoring.Location.ID = factor(usds_data$Monitoring.Location.ID, levels = c(as.character(siteord$Monitoring.Location.ID)))
   udn_count = tapply(usds_data$Parameter.Value_Mean, usds_data$Monitoring.Location.ID, length)
   
-  boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = paste0(means$Parameter.Name[1]," (",means$Parameter.Unit[1],")"), xlab = "",ylim = c(-50, max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
-  abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
-  abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-  legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(linecolors[2],linecolors[3]), bty = "n")
+  boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = plotstuffs$concunit, xlab = "",ylim = c(-50, max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
+  abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+  legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n")
   
   #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$Monitoring.Location.ID)), cex= 1)
   text(x = 1:length(unique(usds_data$Monitoring.Location.ID)), y = rep(-40, length(unique(usds_data$Monitoring.Location.ID))), paste0("n=",udn_count), cex = 0.8)
@@ -508,27 +518,29 @@ observe({
     seldailymeans = merge(seldailymeans,monthpositions_1, all.x = TRUE)
     selectedmonthdata$alldata = seldailymeans
     
-    aggseldg0 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=aggFun)
-    aggseldg0$Parameter.Value_Mean = round(aggseldg0$Parameter.Value_Mean, digits = 1)
-    aggseldg1 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=length)
-    names(aggseldg1)[names(aggseldg1)=="Parameter.Value_Mean"] <- "Ncount"
-    aggseldg2 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=median)
-    names(aggseldg2)[names(aggseldg2)=="Parameter.Value_Mean"] <- "Median"
-    aggseldg2$Median = round(aggseldg2$Median, digits = 1)
-    aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
-    aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
-    aggseldg$Percent_Reduction <- ifelse(aggseldg$Parameter.Value_Mean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$Parameter.Value_Mean), digits=0),0)
-    aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
-    selectedmonthdata$aggregdata = aggseldg
-    table = aggseldg[,!names(aggseldg)%in%c("position","Monitoring.Location.ID")]
-    table = table[,c("month","Ncount","Parameter.Value_Mean","Median","Percent_Reduction")]
-    table = table[order(table$month),]
-    
-    output$Monthly_Data <- renderDT(table,
-                                    colnames = c("Month","Ncount","Mean (MPN/100 mL)","Median (MPN/100 mL)","Reduction Needed (%)"),
-                                    rownames = FALSE,selection='none',
-                                    options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
-    
+    if(dim(selectedmonthdata$alldata)[1]>1){
+      aggseldg0 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=aggFun)
+      aggseldg0$Parameter.Value_Mean = round(aggseldg0$Parameter.Value_Mean, digits = 1)
+      aggseldg1 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=length)
+      names(aggseldg1)[names(aggseldg1)=="Parameter.Value_Mean"] <- "Ncount"
+      aggseldg2 <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID+Monitoring.Location.ID, dat=seldailymeans, FUN=median)
+      names(aggseldg2)[names(aggseldg2)=="Parameter.Value_Mean"] <- "Median"
+      aggseldg2$Median = round(aggseldg2$Median, digits = 1)
+      aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
+      aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
+      aggseldg$Percent_Reduction <- ifelse(aggseldg$Parameter.Value_Mean>input$crit,round(perc.red(input$crit,aggseldg$Parameter.Value_Mean), digits=0),0)
+      aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
+      selectedmonthdata$aggregdata = aggseldg
+      table = aggseldg[,!names(aggseldg)%in%c("position","Monitoring.Location.ID")]
+      table = table[,c("month","Ncount","Parameter.Value_Mean","Median","Percent_Reduction")]
+      table = table[order(table$month),]
+      
+      output$Monthly_Data <- renderDT(table,
+                                      colnames = c("Month","Ncount","Mean (MPN/100 mL)","Median (MPN/100 mL)","Reduction Needed (%)"),
+                                      rownames = FALSE,selection='none',
+                                      options = list(scrollY = '700px', paging = FALSE, scrollX=FALSE, dom = "t"))
+      
+    }
   }
   
   # Need to stop app from crashing when loading data not available from user selection
@@ -576,15 +588,14 @@ observe({
 
 output$Monthly_Means <- renderPlot({
   req(selectedmonthdata$aggregdata)
-      if(input$mon_unit_type=="Concentration"){
+      if(input$mon_unit_type=="Concentration"&dim(selectedmonthdata$alldata)[1]>1){
         y = selectedmonthdata$alldata
         y = droplevels(y[order(y$month),])
         positions = unique(y[,c("month","position")])
         posi = positions[order(positions$month),]
-        boxplot(y$Parameter.Value_Mean~y$month, at = unique(y$position), ylab = "E.coli (MPN/100 mL)", xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
-        abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
-        abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-        legend("topright",legend = c("Max Crit","Geom Crit"), lty = c(2,2), lwd = c(3,3), col = c(linecolors[2],linecolors[3]), bty = "n")
+        boxplot(y$Parameter.Value_Mean~y$month, at = unique(y$position), ylab = plotstuffs$concunit, xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
+        abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+        legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n")
         
         ncounts = selectedmonthdata$aggregdata[,c("month","Ncount")]
         ncounts = ncounts$Ncount[order(ncounts$month)]
@@ -612,7 +623,7 @@ output$Monthly_Means <- renderPlot({
         # data frame with all loading data and their positions 
         pointpos = merge(monloads_flat, repmons, all.x = TRUE)
         
-        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = "Loading (MPN/day)", xlab = "",col = boxcolors[1:2], lty = 1, outline = FALSE)
+        boxplot(monloads_flat$Loading~monloads_flat$Load_Type+monloads_flat$month, at = where, xaxt = "n", ylab = plotstuffs$ldcunit, xlab = "",col = boxcolors[1:2], lty = 1, outline = FALSE)
         axis(side = 1, at = monlab_pos,labels = month.abb)
         legend("topright",legend = c("TMDL","Observed Loading"), pch = c(22,22), pt.bg = c(boxcolors[1],boxcolors[2]), col = "black", pt.cex = 1.5, bty = "n")
         mtext(paste0("n=",selectedmonthdata$aggregdata$Ncount), side = 1, line = 3, at = where, cex= 0.7)
@@ -733,11 +744,10 @@ output$Rec_Means <- renderPlot({
     recdata1 = merge(recdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(recdata1$Parameter.Value_Mean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(recdata1$Parameter.Value_Mean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
-    abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
-    abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Rec","Not Rec",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+    legend("topleft",legend = c("Rec","Not Rec",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black", linecolors[3]),bty = "n")
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_rec_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     
@@ -790,7 +800,7 @@ output$Rec_Means <- renderPlot({
     
     par(mfrow = c(1,2))
     
-    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = plotstuffs$ldcunit,ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
     legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_rec_L), cex = 0.8)
@@ -921,11 +931,10 @@ output$Irg_Means <- renderPlot({
     irgdata1 = merge(irgdata,yearpos, all.x = TRUE)
     aggdata1 = merge(aggdata, yearpos, all.x = TRUE)
     
-    boxplot(irgdata1$Parameter.Value_Mean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = "E.coli (MPN/100 mL)",col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgdata1$Parameter.Value_Mean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
-    abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
-    abline(h = crits$maxcrit, col = linecolors[2], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Max Crit -",crits$maxcrit),paste("Geom Crit -",crits$geomcrit)), pch = c(22,22,NA,NA), lty = c(NA, NA, 2,2), lwd = c(NA, NA, 3,3), pt.bg = c(boxcolors[2],boxcolors[1],NA,NA), col = c("black","black", linecolors[2],linecolors[3]),bty = "n")
+    abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black",linecolors[3]),bty = "n")
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
@@ -977,7 +986,7 @@ output$Irg_Means <- renderPlot({
     
     par(mfrow = c(1,2))
     
-    boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = "Loading (MPN/day)",ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
+    boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = plotstuffs$ldcunit,ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
     legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_irg_L), cex = 0.8)
@@ -1025,7 +1034,7 @@ output$LDC <- renderPlot({
     
   # Pull out observed loadings (E.coli data)
   param.loads <- x[!is.na(x$Parameter.Value_Mean),]
-  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab="Load (GigaMPN/day)", xlim=c(0, 100), ylim=c(0,max(c(param.loads$Observed_Loading, param.loads$TMDL))), main=paste("Load Duration Curve:",x$Monitoring.Location.ID[1]))
+  plot(1, type="n", xlab="Flow Exceedance Percentile", ylab=plotstuffs$ldcunit, xlim=c(0, 100), ylim=c(0,max(c(param.loads$Observed_Loading, param.loads$TMDL))), main=paste("Load Duration Curve:",x$Monitoring.Location.ID[1]))
   abline(v=10, lty=2)
   abline(v=40, lty=2)
   abline(v=60, lty=2)
