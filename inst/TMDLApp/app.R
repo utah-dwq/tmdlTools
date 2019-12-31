@@ -16,7 +16,8 @@ source("tmdlCalcs.R")
 
 perc.red <- function(x,y){100-x/y*100}
 deqPalette <- c("#0080b7","#00afd8","#ADD361")
-dwqPalette <- c("#034963","#0b86a3","#00a1c6")
+#dwqPalette <- c("#034963","#0b86a3","#00a1c6")
+dwqPalette <- c("#febb12","#0b86a3","#62bc99")
 boxcolors = dwqPalette
 linecolors = deqPalette
 
@@ -28,6 +29,7 @@ ui <- fluidPage(title="TMDL Data Explorer",
                                      h3("Select your Excel workbook containing parameter data"),
                                      p(strong("NOTE: "),"Workbooks must fit the data template (AWQMS), but you have the option in this app to calculate loadings and seasonal means on the uploaded dataset."),
                                      sidebarPanel(fileInput("workbook","Select Workbook"),
+                                                  numericInput("crit", label = "Numeric Criterion",value = 0),
                                                   uiOutput("loadcalcs"),
                                                   uiOutput("selectsheet"),
                                                   uiOutput("dwnloadbutton")),
@@ -139,7 +141,7 @@ output$dwnloadbutton <- renderUI({
  observe({
    req(input$loadcalcs)
    if(input$loadcalcs=="Yes"){
-     out <- tmdlCalcs(workbook$wb_path, exportfromfunc = FALSE)
+     out <- tmdlCalcs(workbook$wb_path, inputs = TRUE, crit = input$crit, exportfromfunc = FALSE)
    }else{
      dat = openxlsx::loadWorkbook(workbook$wb_path)
      sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]

@@ -2,6 +2,13 @@
 #' 
 #' This function takes Parameter concentration and flow data (if applicable) to calculate mean concentrations and loadings on a daily, monthly, rec-season, and irrigation season basis. Produces outputs that may be fed into plotting functions within the tmdlTools package.
 #' @param wb_path A file path to the .xlsx file containing Parameter and flow data, linked by MLID/ML_Name/Date, contained in separate worksheets.
+#' @param inputs Logical. Indicates whether the .xlsx file has an Inputs tab containing TMDL conversions and seasonal cutoffs. If not, these inputs must be specified as arguments in the function.
+#' @param crit Numeric. The numeric criterion to be applied to the dataset.
+#' @param cf Numeric. The correction factor to be applied to the loading calculation.
+#' @param mos Numeric. A proportion between 0 and 1 to be used as the margin of safety applied to the TMDL calculations. In other words, this proportion describes the % reduction applied to the straight TMDL loading value based on the standard.
+#' @param rec_ssn Numeric. A two-object vector of year days signifying the start and end to the rec season.
+#' @param irg_ssn Numeric. A two-object vector of year days signifying the start and end to the irrigation season.
+#' @param aggFun String. A character object describing the function used to aggregate to daily/monthly/rec season/irrigation season values. Most typically will be one of the following: gmean, mean, max, min.
 #' @param exportfromfunc Logical. Indicates whether workbook should be exported from tmdlCalcs function, or skipped if using Shiny interface. Default is FALSE to accommodate Shiny use.
 #' @return The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly means, rec/non rec means, and irg/non irg means.
 #' @export tmdlCalcs
@@ -23,7 +30,7 @@
 # wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
 # overwrite=FALSE
 
-tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
+tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, aggFun, exportfromfunc = FALSE){
   
   calcs <- list()
   
@@ -36,19 +43,19 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   wb.dat <- openxlsx::loadWorkbook(wb_path)
   
   ### Obtain criteria from specs.dat sheet or function inputs ###
-  if(!"Inputs"%in%wb.dat$sheet_names){print("Workbook is missing 'Inputs' tab. Please refer to template for required tab contents/format.")}
-  specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
-  
-  # Add to list
-  calcs$Inputs <- specs.dat
-  
-  geom_crit = specs.dat[specs.dat$Parameter=="Geometric Mean Criterion","Value"]
-  max_crit = specs.dat[specs.dat$Parameter=="Max Criterion","Value"]
-  cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
-  mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
-  rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
-  irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
-  aggFun = specs.dat[1,"Aggregating.Function"]
+  if(inputs){
+    specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
+    
+    # Add to list
+    calcs$Inputs <- specs.dat
+    
+    # Generate list of params for loading calcs
+    cf = specs.dat[specs.dat$Parameter=="Correction Factor","Value"]
+    mos = specs.dat[specs.dat$Parameter=="Margin of Safety","Value"]
+    rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
+    irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
+    aggFun = specs.dat[1,"Aggregating.Function"]
+  }
   
   if(aggFun=="gmean"){
     aggFun = function(x){exp(mean(log(x)))}
@@ -99,7 +106,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
   # Trim white space
   # param.dat$Monitoring.Location.ID = trimws(param.dat$Monitoring.Location.ID)
   
-  # Take geometric mean over same site/day samples
+  # Use aggregating function over same site/day samples
 
   param.day.mean <- aggregate(Parameter.Value~Activity.Start.Date+Monitoring.Location.ID+Monitoring.Location.Name+Parameter.Name+Parameter.Unit, data=param.dat, FUN=aggFun)
 
@@ -146,7 +153,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     ## Create loading dataset
     param.flow.dat <- merge(flow.dat.mean,param.day.mean, all.x=TRUE)
     #param.flow.dat = param.flow.dat[!is.na(param.flow.dat$Observed_Loading)]
-    param.flow.dat$TMDL <- ((param.flow.dat$Flow.Value*geom_crit*cf)*(1-mos))/1000000000
+    param.flow.dat$TMDL <- ((param.flow.dat$Flow.Value*crit*cf)*(1-mos))/1000000000
     units = sub("\\/.*", "", param.day.mean$Parameter.Unit[1])
     param.flow.dat$Units = paste0("Giga",units,"/day")
     #param.flow.dat$Loading_Capacity_MOS <- param.flow.dat$Loading_Capacity*(1-mos)
@@ -209,7 +216,7 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     concen_mo_n <- aggregate(Parameter.Value_Mean~month+Monitoring.Location.ID, dat=param.day.mean, FUN=length)
     names(concen_mo_n)[names(concen_mo_n)=="Parameter.Value_Mean"] <- "Ncount_mo_C"
     concen_mo = merge(concen_mo, concen_mo_n, all=TRUE)
-    concen_mo$Percent_Reduction_C <- ifelse(concen_mo$Parameter.Value_Mean>geom_crit,round(perc.red(geom_crit,concen_mo$Parameter.Value_Mean), digits=0),0)
+    concen_mo$Percent_Reduction_C <- ifelse(concen_mo$Parameter.Value_Mean>crit,round(perc.red(crit,concen_mo$Parameter.Value_Mean), digits=0),0)
     
   ## Concentration by rec season ##
     param.day.mean$Year <- lubridate::year(param.day.mean$Activity.Start.Date)
@@ -217,14 +224,14 @@ tmdlCalcs <- function(wb_path, exportfromfunc = FALSE){
     concen_rec_n <- aggregate(Parameter.Value_Mean~Rec_Season+Monitoring.Location.ID+Year, dat=param.day.mean, FUN=length)
     names(concen_rec_n)[names(concen_rec_n)=="Parameter.Value_Mean"] <- "Ncount_rec_C"
     concen_rec = merge(concen_rec, concen_rec_n, all=TRUE)
-    concen_rec$Percent_Reduction_C <- ifelse(concen_rec$Parameter.Value_Mean>geom_crit,round(perc.red(geom_crit,concen_rec$Parameter.Value_Mean), digits=0),0)
+    concen_rec$Percent_Reduction_C <- ifelse(concen_rec$Parameter.Value_Mean>crit,round(perc.red(crit,concen_rec$Parameter.Value_Mean), digits=0),0)
 
   ## Concentration by irrigation season ##
     concen_irg <- aggregate(Parameter.Value_Mean~Irg_Season+Monitoring.Location.ID+Year, dat=param.day.mean, FUN=aggFun)
     concen_irg_n <- aggregate(Parameter.Value_Mean~Irg_Season+Monitoring.Location.ID+Year, dat=param.day.mean, FUN=length)
     names(concen_irg_n)[names(concen_irg_n)=="Parameter.Value_Mean"] <- "Ncount_irg_C"
     concen_irg = merge(concen_irg, concen_irg_n, all=TRUE)
-    concen_irg$Percent_Reduction_C <- ifelse(concen_irg$Parameter.Value_Mean>geom_crit,round(perc.red(geom_crit,concen_irg$Parameter.Value_Mean), digits=0),0)
+    concen_irg$Percent_Reduction_C <- ifelse(concen_irg$Parameter.Value_Mean>crit,round(perc.red(crit,concen_irg$Parameter.Value_Mean), digits=0),0)
 
   # Merge monthly data and write to new datasheet 
     month.dat = merge(concen_mo,mo_load, all=TRUE)
