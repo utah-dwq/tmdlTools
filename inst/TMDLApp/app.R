@@ -314,7 +314,7 @@ output$checkbox1 <- renderUI({
 # Create timeseries data object based on data input, sites, and date ranges selected
 timeseriesdat <- reactiveValues()
 
-# Create ecoli dataset and place date range and colors into reactive object
+# Create dataset and place date range and colors into reactive object
 observe({
   req(workbook$Daily_Mean_Data)
   # Assign site colors
@@ -325,7 +325,7 @@ observe({
   sitecols = data.frame(Monitoring.Location.ID = sites, ML_Col = rep(colrs, length.out = nsites))
   timeseriesdat$sitecols = sitecols
   
-  # Sort to ecoli sites and date range
+  # Sort to sites and date range
   x = workbook$Daily_Mean_Data
   x = x[x$Monitoring.Location.ID %in% input$checkbox,]
   if(!is.null(input$tsdatrange)){
@@ -392,7 +392,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   }
   
 # Flow plots
-  if(!is.null(timeseriesdat$x1)){
+  if(!is.null(input$checkbox1)){
     x1 = timeseriesdat$x1
     x1$Result.Value = as.numeric(x1$Result.Value)
     uni.sites.1 = unique(x1$Monitoring.Location.ID)
@@ -405,6 +405,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     for(i in 1:length(uni.sites.1)){
       flowcol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites.1[i]])
       y1 = x1[x1$Monitoring.Location.ID==uni.sites.1[i],]
+      y1 = y1[order(y1$Activity.Start.Date),]
       if(input$plottype=="Line"){
         lines(y1$Result.Value~y1$Activity.Start.Date, lwd=1, lty=1, col=flowcol)
       }
