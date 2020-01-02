@@ -153,9 +153,9 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     ## Create loading dataset
     param.flow.dat <- merge(flow.dat.mean,param.day.mean, all.x=TRUE)
     #param.flow.dat = param.flow.dat[!is.na(param.flow.dat$Observed_Loading)]
-    param.flow.dat$TMDL <- ((param.flow.dat$Flow.Value*crit*cf)*(1-mos))/1000000000
+    param.flow.dat$TMDL <- (param.flow.dat$Flow.Value*crit*cf)*(1-mos)
     units = sub("\\/.*", "", param.day.mean$Parameter.Unit[1])
-    param.flow.dat$Units = paste0("Giga",units,"/day")
+    param.flow.dat$Units = paste0(units,"/day")
     #param.flow.dat$Loading_Capacity_MOS <- param.flow.dat$Loading_Capacity*(1-mos)
     param.flow.dat$Observed_Loading <- (param.flow.dat$Flow.Value*param.flow.dat$Parameter.Value_Mean*cf)/1000000000
     param.flow.dat$Exceeds <- ifelse(param.flow.dat$Observed_Loading>param.flow.dat$TMDL,"yes","no")

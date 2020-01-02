@@ -451,7 +451,7 @@ output$UD_Means <- renderPlot({
   usds_data$Monitoring.Location.ID = factor(usds_data$Monitoring.Location.ID, levels = c(as.character(siteord$Monitoring.Location.ID)))
   udn_count = tapply(usds_data$Parameter.Value_Mean, usds_data$Monitoring.Location.ID, length)
   
-  boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = plotstuffs$concunit, xlab = "",ylim = c(-50, max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
+  boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = plotstuffs$concunit, xlab = "",ylim = c(-0.1*mean(usds_data$Parameter.Value_Mean), max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
   abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
   legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n")
   
