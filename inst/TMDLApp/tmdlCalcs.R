@@ -42,6 +42,10 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   ### Load the dataset from the workbook ###
   wb.dat <- openxlsx::loadWorkbook(wb_path)
   
+  ### Determine if data are from AWQMS or WQP
+  # flowtest = openxlsx::readWorkbook(wb.dat, sheet = "Flow_data", startRow = 1)
+  # if(!grepl(".",names(flowtest)[1])){}
+  
   ### Obtain criteria from specs.dat sheet or function inputs ###
   if(inputs){
     specs.dat <- openxlsx::readWorkbook(wb.dat, sheet="Inputs",startRow=1)
@@ -108,7 +112,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   
   # Use aggregating function over same site/day samples
 
-  param.day.mean <- aggregate(Parameter.Value~Activity.Start.Date+Monitoring.Location.ID+Monitoring.Location.Name+Parameter.Name+Parameter.Unit, data=param.dat, FUN=aggFun)
+  param.day.mean <- aggregate(Parameter.Value~Activity.Start.Date+Monitoring.Location.ID+Parameter.Name+Parameter.Unit, data=param.dat, FUN=aggFun)
 
   names(param.day.mean)[names(param.day.mean)=="Parameter.Value"] <- "Parameter.Value_Mean"
   
