@@ -157,7 +157,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     units = sub("\\/.*", "", param.day.mean$Parameter.Unit[1])
     param.flow.dat$Units = paste0(units,"/day")
     #param.flow.dat$Loading_Capacity_MOS <- param.flow.dat$Loading_Capacity*(1-mos)
-    param.flow.dat$Observed_Loading <- (param.flow.dat$Flow.Value*param.flow.dat$Parameter.Value_Mean*cf)/1000000000
+    param.flow.dat$Observed_Loading <- param.flow.dat$Flow.Value*param.flow.dat$Parameter.Value_Mean*cf
     param.flow.dat$Exceeds <- ifelse(param.flow.dat$Observed_Loading>param.flow.dat$TMDL,"yes","no")
     
     # Flow Percentile calc function
