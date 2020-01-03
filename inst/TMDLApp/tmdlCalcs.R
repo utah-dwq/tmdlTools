@@ -97,7 +97,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   if("Flow_data"%in%wb.dat$sheet_names){
     flow.dat <- openxlsx::readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
     if("MonitoringLocationIdentifier"%in%names(flow.dat)){
-      setnames(param.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"))
+      setnames(flow.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"), skip_absent = TRUE)
     }
     flow.dat$Activity.Start.Date <- as.Date(flow.dat$Activity.Start.Date, origin="1899-12-30")
     
