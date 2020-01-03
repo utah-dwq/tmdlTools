@@ -17,6 +17,7 @@
 #' @import dplyr
 #' @import shiny
 #' @import openxlsx
+#' @import data.table
 
 # library(openxlsx)
 # library(lubridate)
@@ -65,6 +66,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     aggFun = function(x){exp(mean(log(x)))}
   }
   
+  
   ### Obtain site order from site_order sheet ###
   if("Site_order"%in%wb.dat$sheet_names){
     site.order = openxlsx::readWorkbook(wb.dat, sheet="Site_order", startRow = 1)
@@ -77,6 +79,13 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   param.dat <- openxlsx::readWorkbook(wb.dat,sheet="Param_data",startRow=1)
   param.dat$Activity.Start.Date <- as.Date(param.dat$Activity.Start.Date, origin="1899-12-30")
   
+  ### Convert all columns of interest to AWQMS column names ###
+  if("MonitoringLocationIdentifier"%in%names(param.dat)){
+    setnames(param.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"))
+  }
+  # name_trans = data.frame("AWQMS" = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"),
+  #                         "WQP" = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"))
+  # 
   ### CHECK THAT UNITS ARE CONSISTENT
   if(length(unique(param.dat$Result.Unit))>1){
     stop("Multiple units found in parameter data. Convert units before proceeding.")
@@ -87,7 +96,10 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   
   if("Flow_data"%in%wb.dat$sheet_names){
     flow.dat <- openxlsx::readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
-    flow.dat$Activity.Start.Date <- as.Date(flow.dat$Activity.Start.Date, origin="1899-12-30") 
+    if("MonitoringLocationIdentifier"%in%names(flow.dat)){
+      setnames(param.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"))
+    }
+    flow.dat$Activity.Start.Date <- as.Date(flow.dat$Activity.Start.Date, origin="1899-12-30")
     
     if(length(unique(flow.dat$Result.Unit))>1){
       stop("Multiple units found in flow data. Convert units before proceeding.")
