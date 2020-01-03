@@ -4,8 +4,7 @@
 \alias{plotTimeSeries}
 \title{Plot Parameter Concentrations Over Time}
 \usage{
-plotTimeSeries(x, max_crit, wndws = FALSE, yeslines = TRUE,
-  sitepal = "basel")
+plotTimeSeries(x, max_crit, wndws = FALSE, yeslines = TRUE, sitepal = "basel")
 }
 \arguments{
 \item{x}{A data frame containing a field labeled "E.coli" and another labeled "Date", which has been converted to a date format.}
