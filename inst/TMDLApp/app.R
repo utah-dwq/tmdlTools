@@ -258,7 +258,9 @@ observe({
 
 observe({
   req(workbook$LDC_Data)
-  plotstuffs$ldcunit = paste0(workbook$LDC_Data$Parameter.Name[1]," (",workbook$LDC_Data$Unit[1],")")
+  parm = unique(workbook$LDC_Data$Parameter.Name)
+  param.name = parm[!is.na(parm)][1]
+  plotstuffs$ldcunit = paste0(param.name," (",workbook$LDC_Data$Units[1],")")
 })
 ## Save Criteria in own reactive values for use in all plots ##
 # crits <- reactiveValues()

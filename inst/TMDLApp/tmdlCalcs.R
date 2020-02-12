@@ -9,6 +9,7 @@
 #' @param rec_ssn Numeric. A two-object vector of year days signifying the start and end to the rec season.
 #' @param irg_ssn Numeric. A two-object vector of year days signifying the start and end to the irrigation season.
 #' @param aggFun String. A character object describing the function used to aggregate to daily/monthly/rec season/irrigation season values. Most typically will be one of the following: gmean, mean, max, min.
+#' @param units String. If not supplied in Inputs, units describes the loading units following application of the correction factor. This character string shows up in plot axes and in the export workbook.
 #' @param exportfromfunc Logical. Indicates whether workbook should be exported from tmdlCalcs function, or skipped if using Shiny interface. Default is FALSE to accommodate Shiny use.
 #' @return The output includes a new Excel workbook with the name of the original file plus today's date.xlsx, as well as the following dataframes, composed within a list: ecoli concentrations, flow data, ldc data, monthly means, rec/non rec means, and irg/non irg means.
 #' @export tmdlCalcs
@@ -31,7 +32,7 @@
 # wb_path = "C:\\Users\\ehinman\\Documents\\GitHub\\ecoli_tmdl\\Fremont_data.xlsx"
 # overwrite=FALSE
 
-tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, aggFun, exportfromfunc = FALSE){
+tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, aggFun, units, exportfromfunc = FALSE){
   
   calcs <- list()
   
@@ -60,6 +61,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     rec_ssn = c(specs.dat[specs.dat$Parameter=="Rec Season Start","Value"],specs.dat[specs.dat$Parameter=="Rec Season End","Value"])
     irg_ssn = c(specs.dat[specs.dat$Parameter=="Irrigation Season Start","Value"],specs.dat[specs.dat$Parameter=="Irrigation Season End","Value"])
     aggFun = specs.dat[1,"Aggregating.Function"]
+    units = specs.dat[1, "TMDL.units"]
   }
   
   if(aggFun=="gmean"){
@@ -77,12 +79,13 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   
   # Load Param concentrations
   param.dat <- openxlsx::readWorkbook(wb.dat,sheet="Param_data",startRow=1)
-  param.dat$Activity.Start.Date <- as.Date(param.dat$Activity.Start.Date, origin="1899-12-30")
-  
+   
   ### Convert all columns of interest to AWQMS column names ###
   if("MonitoringLocationIdentifier"%in%names(param.dat)){
-    setnames(param.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"))
+    data.table::setnames(param.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure/MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"), skip_absent = TRUE)
   }
+  param.dat$Activity.Start.Date <- as.Date(param.dat$Activity.Start.Date, origin="1899-12-30")
+  
   # name_trans = data.frame("AWQMS" = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"),
   #                         "WQP" = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"))
   # 
@@ -97,7 +100,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
   if("Flow_data"%in%wb.dat$sheet_names){
     flow.dat <- openxlsx::readWorkbook(wb.dat, sheet="Flow_data", startRow=1)
     if("MonitoringLocationIdentifier"%in%names(flow.dat)){
-      setnames(flow.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure.MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"), skip_absent = TRUE)
+      data.table::setnames(flow.dat, old = c("ActivityStartDate","CharacteristicName","ResultMeasureValue","ResultMeasure/MeasureUnitCode","DetectionQuantitationLimitMeasure.MeasureValue","MonitoringLocationIdentifier"), new = c("Activity.Start.Date","Characteristic.Name","Result.Value","Result.Unit","Detection.Limit.Value1","Monitoring.Location.ID"), skip_absent = TRUE)
     }
     flow.dat$Activity.Start.Date <- as.Date(flow.dat$Activity.Start.Date, origin="1899-12-30")
     
@@ -170,8 +173,8 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     param.flow.dat <- merge(flow.dat.mean,param.day.mean, all.x=TRUE)
     #param.flow.dat = param.flow.dat[!is.na(param.flow.dat$Observed_Loading)]
     param.flow.dat$TMDL <- (param.flow.dat$Flow.Value*crit*cf)*(1-mos)
-    units = sub("\\/.*", "", param.day.mean$Parameter.Unit[1])
-    param.flow.dat$Units = paste0(units,"/day")
+    # units = sub("\\/.*", "", param.day.mean$Parameter.Unit[1])
+    param.flow.dat$Units = units
     #param.flow.dat$Loading_Capacity_MOS <- param.flow.dat$Loading_Capacity*(1-mos)
     param.flow.dat$Observed_Loading <- param.flow.dat$Flow.Value*param.flow.dat$Parameter.Value_Mean*cf
     param.flow.dat$Exceeds <- ifelse(param.flow.dat$Observed_Loading>param.flow.dat$TMDL,"yes","no")
@@ -193,7 +196,7 @@ tmdlCalcs <- function(wb_path, inputs = TRUE, crit, cf, mos, rec_ssn, irg_ssn, a
     param.ldc <- ldc.dat[!is.na(ldc.dat$Parameter.Value_Mean),]
     
     ## Loading by month ##
-    param.ldc$month <- month(param.ldc$Activity.Start.Date, label=TRUE)
+    param.ldc$month <- lubridate::month(param.ldc$Activity.Start.Date, label=TRUE)
     ol_mo <- aggregate(Observed_Loading~month+Monitoring.Location.ID, dat=param.ldc, FUN=aggFun)
     tmdl_mo <- aggregate(TMDL~month+Monitoring.Location.ID, dat=param.ldc, FUN=aggFun)
     n_mo <- aggregate(TMDL~month+Monitoring.Location.ID, dat = param.ldc, FUN=length)
