@@ -348,6 +348,7 @@ observe({
   x1 <- x1[x1$Activity.Start.Date>=timeseriesdat$min&x1$Activity.Start.Date<=timeseriesdat$max,]
   if(dim(x1)[1]>0){
     timeseriesdat$x1 = x1
+    blah <<- reactiveValuesToList(timeseriesdat)
   }else{timeseriesdat$x1 = NULL}})
 
 output$Time_Series <- renderPlot({
@@ -390,7 +391,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Criterion - ",input$crit)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), bty="n", pt.cex=c(rep(2,length(colr)),NA),cex=1)
+    l=legend("topleft",c(site,paste0("Criterion - ",input$crit)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
   }
   
 # Flow plots
@@ -415,7 +416,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site1[i] = uni.sites.1[i]
       colr1[i] = flowcol
     }
-    l=legend("topright",c(site1),col="black",pt.bg=c(ggplot2::alpha(colr1, 0.6)), pch=23, bty="n", pt.cex=2,cex=1)
+    l=legend("topright",c(site1),col="black",pt.bg=c(ggplot2::alpha(colr1, 0.6)), pch=23, pt.cex=2,cex=1.5)
   }
 })
 
@@ -455,7 +456,7 @@ output$UD_Means <- renderPlot({
   
   boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = plotstuffs$concunit, xlab = "",ylim = c(-0.1*mean(usds_data$Parameter.Value_Mean), max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
   abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-  legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n")
+  legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n", cex = 1.5)
   
   #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$Monitoring.Location.ID)), cex= 1)
   text(x = 1:length(unique(usds_data$Monitoring.Location.ID)), y = rep(-40, length(unique(usds_data$Monitoring.Location.ID))), paste0("n=",udn_count), cex = 0.8)
@@ -598,7 +599,7 @@ output$Monthly_Means <- renderPlot({
         posi = positions[order(positions$month),]
         boxplot(y$Parameter.Value_Mean~y$month, at = unique(y$position), ylab = plotstuffs$concunit, xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
         abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-        legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n")
+        legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n", cex = 1.5)
         
         ncounts = selectedmonthdata$aggregdata[,c("month","Ncount")]
         ncounts = ncounts$Ncount[order(ncounts$month)]
@@ -750,7 +751,7 @@ output$Rec_Means <- renderPlot({
     boxplot(recdata1$Parameter.Value_Mean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Rec","Not Rec",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black", linecolors[3]),bty = "n")
+    legend("topleft",legend = c("Rec","Not Rec",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black", linecolors[3]),bty = "n", cex = 1.5)
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_rec_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     
@@ -805,7 +806,7 @@ output$Rec_Means <- renderPlot({
     
     boxplot(recl$Load~recl$Type+recl$Year, at = positions1, main = "Rec Season", xaxt = "n", xlab = "", ylab = plotstuffs$ldcunit,ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
-    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    legend("topleft",legend = c("Rec Season","Not Rec Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n", cex = 1.5)
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_rec_L), cex = 0.8)
     
     if(input$viewrecdat){
@@ -937,7 +938,7 @@ output$Irg_Means <- renderPlot({
     boxplot(irgdata1$Parameter.Value_Mean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
     abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black",linecolors[3]),bty = "n")
+    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black",linecolors[3]),bty = "n", cex = 1.5)
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
@@ -991,7 +992,7 @@ output$Irg_Means <- renderPlot({
     
     boxplot(irgl$Load~irgl$Type+irgl$Year, at = positions1, main = "Irrigation Season", xaxt = "n", xlab = "", ylab = plotstuffs$ldcunit,ylim = c(0,plotrange[2]),col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab1$position, label = yearlab1$Year)
-    legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n")
+    legend("topleft",legend = c("Irrigation Season","Not Irrigation Season","TMDL"), pch = c(22,22,22), pt.bg = c(boxcolors[2],boxcolors[3],boxcolors[1]), col = c("black","black", "black"),bty = "n", cex = 1.5)
     text(aggyear1$position,rep(-10, length(aggyear1$position)), labels = paste("n =",aggyear1$Ncount_irg_L), cex = 0.8)
     
     if(input$viewirgdat){
@@ -1064,7 +1065,7 @@ if(input$ldc_type == "Scatterplot"){
     points(spre$Observed_Loading~spre$Flow_Percentile, pch=21, col="black", bg=colpal[3], cex=2)
     points(sume$Observed_Loading~sume$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
     points(fale$Observed_Loading~fale$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
-    legend("topright",legend=c("TMDL", "Loading - Winter", "Loading - Spring", "Loading - Summer","Loading - Fall"), bty="n", col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "Loading - Winter", "Loading - Spring", "Loading - Summer","Loading - Fall"), col=c("firebrick3","black","black","black","black"), lty=c(1,NA,NA,NA,NA),lwd=c(2,NA,NA,NA,NA),pch=c(NA,21,21,21,21), pt.bg=c(NA,colpal[4],colpal[3],colpal[2],colpal[1]), pt.cex=c(NA,2,2,2,2),cex=1.5)
   }
 
   # Point colors
@@ -1075,7 +1076,7 @@ if(input$ldc_type == "Scatterplot"){
     
     points(rec$Observed_Loading~rec$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonrec$Observed_Loading~nonrec$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("TMDL","Loading - Rec", "Loading - Non-Rec"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL","Loading - Rec", "Loading - Non-Rec"), col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1.5)
     
   }
   
@@ -1086,7 +1087,7 @@ if(input$ldc_type == "Scatterplot"){
     
     points(irg$Observed_Loading~irg$Flow_Percentile, pch=21, col="black", bg=colpal[1], cex=2)
     points(nonirg$Observed_Loading~nonirg$Flow_Percentile, pch=21, col="black", bg=colpal[2], cex=2)
-    legend("topright",legend=c("TMDL", "Loading - Irrigation", "Loading - No Irrigation"), bty="n", col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1)
+    legend("topright",legend=c("TMDL", "Loading - Irrigation", "Loading - No Irrigation"), col=c("firebrick3","black","black"), lty=c(1,NA,NA),lwd=c(2,NA,NA),pch=c(NA,21,21), pt.bg=c(NA,colpal), pt.cex=c(NA,2,2),cex=1.5)
     
   }
 }else{
@@ -1100,7 +1101,7 @@ if(input$ldc_type == "Scatterplot"){
   param.loads$Flow_Cat = factor(param.loads$Flow_Cat, levels= c("High","Moist", "MidRange","Dry","Low"))
   
   boxplot(param.loads$Observed_Loading~param.loads$Flow_Cat, col=ggplot2::alpha(boxcolors[2],0.7), at = c(5,25,50,75,95),lty=1, xaxt="n", frame=FALSE, boxwex = 5, add=TRUE)
-  legend("topright",legend=c("TMDL", "Observed Loading"), bty="n", col=c("firebrick3","black"), lty=c(1,NA),lwd=c(2,NA),pch=c(NA,22), pt.bg=c(NA,ggplot2::alpha(boxcolors[2],0.7)), pt.cex=c(NA,2),cex=1)
+  legend("topright",legend=c("TMDL", "Observed Loading"), col=c("firebrick3","black"), lty=c(1,NA),lwd=c(2,NA),pch=c(NA,22), pt.bg=c(NA,ggplot2::alpha(boxcolors[2],0.7)), pt.cex=c(NA,2),cex=1.5)
   
   }
   
