@@ -43,6 +43,8 @@ ui <- fluidPage(title="TMDL Data Explorer",
                                      sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
+                                                  textInput("crit1", "Criterion 1"),
+                                                  textInput("crit2", "Criterion 2"),
                                                   br(),
                                                   br(),
                                                   uiOutput("checkbox"),
@@ -196,9 +198,9 @@ output$dwnloadbutton <- renderUI({
      addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
      writeData(wb, sheet = names(wbdownload)[i], wbdownload[[i]], rowNames = FALSE, colNames = TRUE)
    }
-   if(length(wbdownload)>7){
-     worksheetOrder(wb) = c(5,1,7,3,9,2,4,6,8)
-   }else{worksheetOrder(wb) = c(4,1,6,7,2,3,5)}
+   # if(length(wbdownload)>7){
+   #   worksheetOrder(wb) = c(5,1,7,3,9,2,4,6,8)
+   # }else{worksheetOrder(wb) = c(4,1,6,7,2,3,5)}
    wbdwn$outputworkbook = wb
  })
 
@@ -368,7 +370,8 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
   plot(1, type="n", xlab="", ylab=plotstuffs$concunit, xaxt="n", xlim=c(min, max), ylim=c(0, max_y))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=input$crit, col="red", lwd=2)
+  abline(h=input$crit1, col="red", lwd=2)
+  abline(h=input$crit2, col="orange", lwd=2)
   site = vector()
   colr = vector()
 }
@@ -383,7 +386,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     for(i in 1:length(uni.sites)){
       concol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites[i]])
       y = x[x$Monitoring.Location.ID==uni.sites[i],]
-      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit)])/length(y$Parameter.Value_Mean)*100, digits=0)
+      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit1)])/length(y$Parameter.Value_Mean)*100, digits=0)
       if(input$plottype=="Line"){
         lines(y$Parameter.Value_Mean~y$Activity.Start.Date, lwd=1, lty=1, col=concol)
       }
@@ -391,7 +394,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
       colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Criterion - ",input$crit)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
+    l=legend("topleft",c(site,paste0("Criterion - ",input$crit1)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
   }
   
 # Flow plots
