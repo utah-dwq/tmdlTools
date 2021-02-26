@@ -49,9 +49,9 @@ ui <- fluidPage(title="TMDL Data Explorer",
                                                   # br(),
                                                   # textInput("crit2", "Criterion 2"),
                                                   # prettySwitch("crit2on","% exc",value = FALSE, bigger = TRU
-                                                  fluidRow(column(3, textInput("crit1", "Criterion 1")),
-                                                           column(2, tags$div(prettySwitch("crit1on","% exc",value = FALSE, bigger = TRUE), style = "padding:30px"))),
-                                                  fluidRow(column(3, textInput("crit2", "Criterion 2"))),
+                                                  fluidRow(column(3, numericInput("crit1", "Criterion 1", value = 0)),
+                                                           column(2, tags$div(prettySwitch("crit1on","% exc",value = TRUE, bigger = TRUE), style = "padding:30px"))),
+                                                  fluidRow(column(3, numericInput("crit2", "Criterion 2", value = 0))),
                                                   br(),
                                                   br(),
                                                   uiOutput("checkbox"),
@@ -393,13 +393,15 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
     for(i in 1:length(uni.sites)){
       concol = as.character(colrs$ML_Col[colrs$Monitoring.Location.ID == uni.sites[i]])
       y = x[x$Monitoring.Location.ID==uni.sites[i],]
-      perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit1)])/length(y$Parameter.Value_Mean)*100, digits=0)
       if(input$plottype=="Line"){
         lines(y$Parameter.Value_Mean~y$Activity.Start.Date, lwd=1, lty=1, col=concol)
       }
       points(y$Parameter.Value_Mean~y$Activity.Start.Date, pch=21, cex=2, col="black", bg=concol)
-      site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
-      colr[i] = concol
+      if(input$crit1on){
+        perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit1)])/length(y$Parameter.Value_Mean)*100, digits=0)
+        site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
+        }else{site[i]=uni.sites[i]}
+        colr[i] = concol
     }
     l=legend("topleft",c(site,paste0("Criterion - ",input$crit1)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
   }
@@ -1064,7 +1066,7 @@ output$LDC <- renderPlot({
 # Plot types     
 if(input$ldc_type == "Scatterplot"){
   if(input$pt_type=="Calendar Seasons"){
-    colpal <- colorspace::sequential_hcl(4)
+    colpal <- c("#264653","#2a9d8f","#e9c46a","#e76f51")
     wine <- param.loads[param.loads$CalSeason=="Winter",]
     spre <- param.loads[param.loads$CalSeason=="Spring",]
     sume <- param.loads[param.loads$CalSeason=="Summer",]
