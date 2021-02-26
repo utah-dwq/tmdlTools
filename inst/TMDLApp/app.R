@@ -3,6 +3,7 @@ require(openxlsx)
 require(lubridate)
 require(DT)
 require(shinyjs)
+require(shinyWidgets)
 require(shinyjqui)
 require(yarrr)
 require(colorspace)
@@ -43,8 +44,14 @@ ui <- fluidPage(title="TMDL Data Explorer",
                                      sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
-                                                  textInput("crit1", "Criterion 1"),
-                                                  textInput("crit2", "Criterion 2"),
+                                                  # textInput("crit1", "Criterion 1"),
+                                                  # prettySwitch("crit1on","% exc",value = FALSE, bigger = TRUE),
+                                                  # br(),
+                                                  # textInput("crit2", "Criterion 2"),
+                                                  # prettySwitch("crit2on","% exc",value = FALSE, bigger = TRU
+                                                  fluidRow(column(3, textInput("crit1", "Criterion 1")),
+                                                           column(2, tags$div(prettySwitch("crit1on","% exc",value = FALSE, bigger = TRUE), style = "padding:30px"))),
+                                                  fluidRow(column(3, textInput("crit2", "Criterion 2"))),
                                                   br(),
                                                   br(),
                                                   uiOutput("checkbox"),
@@ -111,7 +118,7 @@ ui <- fluidPage(title="TMDL Data Explorer",
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
   
 ###################################### FILE UPLOAD SECTION ################################
 
@@ -276,6 +283,9 @@ observe({
 
 ################################# TIME SERIES SECTION ########################################
 
+# Create timeseries data object based on data input, sites, and date ranges selected
+timeseriesdat <- reactiveValues()
+
 # Get time series max and min date range based on data upload
 output$tsdatrange <- renderUI({
   req(workbook$Daily_Mean_Data)
@@ -315,9 +325,6 @@ output$checkbox1 <- renderUI({
 
 })
 
-# Create timeseries data object based on data input, sites, and date ranges selected
-timeseriesdat <- reactiveValues()
-
 # Create dataset and place date range and colors into reactive object
 observe({
   req(workbook$Daily_Mean_Data)
@@ -350,7 +357,7 @@ observe({
   x1 <- x1[x1$Activity.Start.Date>=timeseriesdat$min&x1$Activity.Start.Date<=timeseriesdat$max,]
   if(dim(x1)[1]>0){
     timeseriesdat$x1 = x1
-    blah <<- reactiveValuesToList(timeseriesdat)
+    # blah <<- reactiveValuesToList(timeseriesdat)
   }else{timeseriesdat$x1 = NULL}})
 
 output$Time_Series <- renderPlot({
