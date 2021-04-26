@@ -366,7 +366,8 @@ output$Time_Series <- renderPlot({
   min = timeseriesdat$min
   max = timeseriesdat$max
   if(is.null(timeseriesdat$x)){
-    max_y = max(workbook$Daily_Mean_Data$Parameter.Value)
+    max_y = max(workbook$Daily_Mean_Data$Parameter.Value)*1.1
+    min_y = min(workbook$Daily_Mean_Data$Parameter.Value)*0.9
   }else{max_y = max(timeseriesdat$x$Parameter.Value)}
   
   
