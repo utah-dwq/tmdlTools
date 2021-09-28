@@ -404,7 +404,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
         }else{site[i]=uni.sites[i]}
         colr[i] = concol
     }
-    l=legend("topleft",c(site,paste0("Criterion - ",input$crit1)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
+    legend("topleft",legend = c(site,paste0("Criterion - ",input$crit1)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
   }
   
 # Flow plots
@@ -429,7 +429,7 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
       site1[i] = uni.sites.1[i]
       colr1[i] = flowcol
     }
-    l=legend("topright",c(site1),col="black",pt.bg=c(ggplot2::alpha(colr1, 0.6)), pch=23, pt.cex=2,cex=1.5)
+    legend("topright",legend = c(site1),col="black",pt.bg=c(ggplot2::alpha(colr1, 0.6)), pch=23, pt.cex=2,cex=1.5)
   }
 })
 
