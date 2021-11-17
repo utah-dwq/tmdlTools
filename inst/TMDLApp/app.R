@@ -25,22 +25,22 @@ linecolors = deqPalette
 ui <- fluidPage(title="TMDL Data Explorer",
                 titlePanel(title=div(img(width="8%",height="8%",src="dwq_logo_small.png"), "TMDL Data Visualization Tool")),
                 tabsetPanel(id="all_the_things",
-                            tabPanel("Upload Data",
-                                     useShinyjs(),
-                                     h3("Select your Excel workbook containing parameter data"),
-                                     p(strong("NOTE: "),"Workbooks must fit the data template, but you have the option in this app to calculate loadings and seasonal means on the uploaded dataset."),
-                                     sidebarPanel(fileInput("workbook","Select Workbook"),
-                                                  numericInput("crit", label = "Numeric Criterion",value = 0),
-                                                  uiOutput("loadcalcs"),
-                                                  uiOutput("selectsheet"),
-                                                  uiOutput("dwnloadbutton")),
-                                     mainPanel(h4("Data View"),
-                                               h5("Toggle between sheets in the workbook using the drop down menu at the bottom of the sidebar."),
-                                               DTOutput("datview"), style= "font-size:75%")
-                                     ),
+                            # tabPanel("Upload Data",
+                            #          useShinyjs(),
+                            #          h3("Select your Excel workbook containing parameter data"),
+                            #          p(strong("NOTE: "),"Workbooks must fit the data template, but you have the option in this app to calculate loadings and seasonal means on the uploaded dataset."),
+                            #          sidebarPanel(fileInput("workbook","Select Workbook"),
+                            #                       numericInput("crit", label = "Numeric Criterion",value = 0),
+                            #                       uiOutput("loadcalcs"),
+                            #                       uiOutput("selectsheet"),
+                            #                       uiOutput("dwnloadbutton")),
+                            #          mainPanel(h4("Data View"),
+                            #                    h5("Toggle between sheets in the workbook using the drop down menu at the bottom of the sidebar."),
+                            #                    DTOutput("datview"), style= "font-size:75%")
+                            #          ),
                             tabPanel("Time Series",
                                      shinyjs::useShinyjs(),
-                                     h3("Parameter Concentrations Over Time by Site"),
+                                     h3("E. coli Concentrations Over Time by Site"),
                                      sidebarPanel(radioButtons("plottype", label = "Select Plot Type", choices = c("Point","Line"), selected = "Point", inline = TRUE),
                                                   div(id = "date",
                                                       uiOutput("tsdatrange")),
@@ -49,11 +49,11 @@ ui <- fluidPage(title="TMDL Data Explorer",
                                                   # br(),
                                                   # textInput("crit2", "Criterion 2"),
                                                   # prettySwitch("crit2on","% exc",value = FALSE, bigger = TRU
-                                                  fluidRow(column(3, numericInput("crit1", "Criterion 1", value = 0)),
-                                                           column(2, tags$div(prettySwitch("crit1on","% exc",value = TRUE, bigger = TRUE), style = "padding:30px"))),
-                                                  fluidRow(column(3, numericInput("crit2", "Criterion 2", value = 0))),
-                                                  br(),
-                                                  br(),
+                                                  # fluidRow(column(3, numericInput("crit1", "Criterion 1", value = 0)),
+                                                  #          column(2, tags$div(prettySwitch("crit1on","% exc",value = TRUE, bigger = TRUE), style = "padding:30px"))),
+                                                  # fluidRow(column(3, numericInput("crit2", "Criterion 2", value = 0))),
+                                                  # br(),
+                                                  # br(),
                                                   uiOutput("checkbox"),
                                                   br(),
                                                   uiOutput("checkbox1")),
@@ -126,38 +126,38 @@ server <- function(input, output, session) {
   workbook <- reactiveValues()
   snames <- reactiveValues()
 # Obtain file path
-  observeEvent(input$workbook,{
-    fileup = input$workbook
-    workbook$wb_path = fileup$datapath})
+  # observeEvent(input$workbook,{
+  #   fileup = input$workbook
+  #   workbook$wb_path = fileup$datapath})
 
 # Run tmdl tools widget, which disables once clicked
- output$loadcalcs <- renderUI({
-    req(input$workbook)
-    radioButtons("loadcalcs", label = "Perform Daily Aggregation/Loading Calcs?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
-  })
-
- observeEvent(input$loadcalcs,{
-   disable("loadcalcs")
-   disable("crit")
- })
+ # output$loadcalcs <- renderUI({
+ #    req(input$workbook)
+ #    radioButtons("loadcalcs", label = "Perform Daily Aggregation/Loading Calcs?", selected = character(0), choices=c("Yes","No"), inline=TRUE)
+ #  })
+ # 
+ # observeEvent(input$loadcalcs,{
+ #   disable("loadcalcs")
+ #   disable("crit")
+ # })
 
 # Download button that shows after sheet widget
-output$dwnloadbutton <- renderUI({
-  req(input$selectsheet)
-  downloadButton("export_loadcalcs","Export workbook")
-})
+# output$dwnloadbutton <- renderUI({
+#   req(input$selectsheet)
+#   downloadButton("export_loadcalcs","Export workbook")
+# })
 
 ### Reading in the data from the file to the reactive environment ###
  observe({
-   req(input$loadcalcs)
-   if(input$loadcalcs=="Yes"){
-     out <- tmdlCalcs(workbook$wb_path, inputs = TRUE, crit = input$crit, exportfromfunc = FALSE)
-   }else{
-     dat = openxlsx::loadWorkbook(workbook$wb_path)
-     sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
-     out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
-     names(out) = sheets
-   }
+   # if(input$loadcalcs=="Yes"){
+   workbook$wb_path = "extdata\\fremont_wqp_data_demo.xlsx"
+     out <- tmdlCalcs(workbook$wb_path, inputs = TRUE, crit = 126, exportfromfunc = FALSE)
+   # }else{
+   #   dat = openxlsx::loadWorkbook(workbook$wb_path)
+   #   sheets = dat$sheet_names[!dat$sheet_names=="READ ME"]
+   #   out <- lapply(sheets, function(x)openxlsx::readWorkbook(workbook$wb_path, sheet = x, detectDates = TRUE))
+   #   names(out) = sheets
+   # }
    workbook$Param_data = out$Param_data
    workbook$Inputs = out$Inputs
    if(!is.null(out$Site_order)){
@@ -185,51 +185,51 @@ output$dwnloadbutton <- renderUI({
 
  # Create drop down menu of sheets contained in xlsx file
  
- output$selectsheet <- renderUI({
-   req(workbook$Inputs)
-   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c(snames$sheets))
- })
+ # output$selectsheet <- renderUI({
+ #   req(workbook$Inputs)
+ #   selectInput("selectsheet", label = "Select sheet to view.", selected = NULL, choices=c(snames$sheets))
+ # })
  
  # Object to be fed to the download handler
- wbdwn <- reactiveValues()
+ # wbdwn <- reactiveValues()
 
  # Create workbook where each workbook reactive values object is added to the wbdwn reactive values object for use in download handler.
- observe({
-   req(workbook$Inputs)
-   wbdownload <- reactiveValuesToList(workbook)
-   wbdownload$wb_path = NULL
-
-   wb <- openxlsx::createWorkbook()
-
-   for(i in 1:length(wbdownload)){
-     addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
-     writeData(wb, sheet = names(wbdownload)[i], wbdownload[[i]], rowNames = FALSE, colNames = TRUE)
-   }
-   # if(length(wbdownload)>7){
-   #   worksheetOrder(wb) = c(5,1,7,3,9,2,4,6,8)
-   # }else{worksheetOrder(wb) = c(4,1,6,7,2,3,5)}
-   wbdwn$outputworkbook = wb
- })
-
- # Download results of loadcalcs
- output$export_loadcalcs <- downloadHandler(
-   filename = paste0(unlist(strsplit(input$workbook$name,".xlsx")),"_",Sys.Date(),".xlsx"),
-   content = function(file) {
-     openxlsx::saveWorkbook(wbdwn$outputworkbook, file)
-   }
- )
-
- observe({
-   req(input$selectsheet)
-   tableview = workbook[[input$selectsheet]]
-
-   # Load data tables on first page
-   output$datview <- renderDT(tableview,
-                              rownames = FALSE,selection='none',filter="top",
-                              options = list(scrollY = '600px', paging = FALSE, scrollX=TRUE))
-
- })
-
+ # observe({
+ #   req(workbook$Inputs)
+ #   wbdownload <- reactiveValuesToList(workbook)
+ #   wbdownload$wb_path = NULL
+ # 
+ #   wb <- openxlsx::createWorkbook()
+ # 
+ #   for(i in 1:length(wbdownload)){
+ #     addWorksheet(wb, names(wbdownload)[i], gridLines = TRUE)
+ #     writeData(wb, sheet = names(wbdownload)[i], wbdownload[[i]], rowNames = FALSE, colNames = TRUE)
+ #   }
+ #   # if(length(wbdownload)>7){
+ #   #   worksheetOrder(wb) = c(5,1,7,3,9,2,4,6,8)
+ #   # }else{worksheetOrder(wb) = c(4,1,6,7,2,3,5)}
+ #   wbdwn$outputworkbook = wb
+ # })
+ # 
+ # # Download results of loadcalcs
+ # output$export_loadcalcs <- downloadHandler(
+ #   filename = paste0(unlist(strsplit(input$workbook$name,".xlsx")),"_",Sys.Date(),".xlsx"),
+ #   content = function(file) {
+ #     openxlsx::saveWorkbook(wbdwn$outputworkbook, file)
+ #   }
+ # )
+ # 
+ # observe({
+ #   req(input$selectsheet)
+ #   tableview = workbook[[input$selectsheet]]
+ # 
+ #   # Load data tables on first page
+ #   output$datview <- renderDT(tableview,
+ #                              rownames = FALSE,selection='none',filter="top",
+ #                              options = list(scrollY = '600px', paging = FALSE, scrollX=TRUE))
+ # 
+ # })
+ # 
 # Add loading tab if loadings present
   observe({
     if(!is.null(workbook$LDC_Data)){
@@ -269,17 +269,17 @@ observe({
   req(workbook$LDC_Data)
   parm = unique(workbook$LDC_Data$Parameter.Name)
   param.name = parm[!is.na(parm)][1]
-  plotstuffs$ldcunit = paste0(param.name," (",workbook$LDC_Data$Units[1],")")
+  plotstuffs$ldcunit = paste0(param.name," (MPN/day)")
 })
 ## Save Criteria in own reactive values for use in all plots ##
-# crits <- reactiveValues()
-# 
-# observe({
-#   req(workbook$Inputs)
-#   inputs <- workbook$Inputs
-#   crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
-#   crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
-# })
+crits <- reactiveValues()
+
+observe({
+  req(workbook$Inputs)
+  inputs <- workbook$Inputs
+  # crits$maxcrit = as.numeric(inputs$Value[inputs$Parameter == "Max Criterion"])
+  crits$geomcrit = as.numeric(inputs$Value[inputs$Parameter == "Geometric Mean Criterion"])
+})
 
 ################################# TIME SERIES SECTION ########################################
 
@@ -378,8 +378,8 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
   # Create an empty plot
   plot(1, type="n", xlab="", ylab=plotstuffs$concunit, xaxt="n", xlim=c(min, max), ylim=c(0, max_y))
   axis.Date(1, at=seq(min, max, by="6 months"), format="%m-%Y", las=2, cex=0.8)
-  abline(h=input$crit1, col="red", lwd=2)
-  abline(h=input$crit2, col="orange", lwd=2)
+  abline(h=crits$geomcrit, col="red", lwd=2)
+  # abline(h=crits$maxcrit, col="orange", lwd=2)
   site = vector()
   colr = vector()
 }
@@ -398,13 +398,13 @@ if(!is.null(input$checkbox)|!is.null(input$checkbox1)){
         lines(y$Parameter.Value_Mean~y$Activity.Start.Date, lwd=1, lty=1, col=concol)
       }
       points(y$Parameter.Value_Mean~y$Activity.Start.Date, pch=21, cex=2, col="black", bg=concol)
-      if(input$crit1on){
-        perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(input$crit1)])/length(y$Parameter.Value_Mean)*100, digits=0)
+      # if(input$crit1on){
+        perc.exc = round(length(y$Parameter.Value_Mean[y$Parameter.Value_Mean>as.numeric(crits$geomcrit)])/length(y$Parameter.Value_Mean)*100, digits=0)
         site[i] = paste0(as.character(uni.sites[i])," (",perc.exc,"% Exceed)")
-        }else{site[i]=uni.sites[i]}
+        # }else{site[i]=uni.sites[i]}
         colr[i] = concol
     }
-    legend("topleft",legend = c(site,paste0("Criterion - ",input$crit1)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
+    legend("topleft",legend = c(site,paste0("Criterion - ",crits$geomcrit)),col=c(rep("black",length(colr)),"red"),lwd=c(rep(NA,length(colr)),2),pt.bg=c(colr,NA), pch=c(rep(21,length(colr)),NA), pt.cex=c(rep(2,length(colr)),NA),cex=1.5)
   }
   
 # Flow plots
@@ -468,7 +468,7 @@ output$UD_Means <- renderPlot({
   udn_count = tapply(usds_data$Parameter.Value_Mean, usds_data$Monitoring.Location.ID, length)
   
   boxplot(usds_data$Parameter.Value_Mean~usds_data$Monitoring.Location.ID, ylab = plotstuffs$concunit, xlab = "",ylim = c(-0.1*mean(usds_data$Parameter.Value_Mean), max(usds_data$Parameter.Value_Mean)),col = boxcolors[2], lty = 1, outline = FALSE, las = 2, cex.axis = 0.8)
-  abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+  abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
   legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n", cex = 1.5)
   
   #mtext(paste0("n=",udn_count), side = 1, line = 3, at = 1:length(unique(usds_data$Monitoring.Location.ID)), cex= 1)
@@ -545,7 +545,7 @@ observe({
       aggseldg2$Median = round(aggseldg2$Median, digits = 1)
       aggseldg = merge(aggseldg0, aggseldg1, all = TRUE)
       aggseldg = merge(aggseldg, aggseldg2, all = TRUE)
-      aggseldg$Percent_Reduction <- ifelse(aggseldg$Parameter.Value_Mean>input$crit,round(perc.red(input$crit,aggseldg$Parameter.Value_Mean), digits=0),0)
+      aggseldg$Percent_Reduction <- ifelse(aggseldg$Parameter.Value_Mean>crits$geomcrit,round(perc.red(crits$geomcrit,aggseldg$Parameter.Value_Mean), digits=0),0)
       aggseldg = merge(aggseldg, monthpositions_1, all.x = TRUE)
       selectedmonthdata$aggregdata = aggseldg
       table = aggseldg[,!names(aggseldg)%in%c("position","Monitoring.Location.ID")]
@@ -611,7 +611,7 @@ output$Monthly_Means <- renderPlot({
         positions = unique(y[,c("month","position")])
         posi = positions[order(positions$month),]
         boxplot(y$Parameter.Value_Mean~y$month, at = unique(y$position), ylab = plotstuffs$concunit, xlab = "",col = boxcolors[2], lty = 1, outline = FALSE)
-        abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
+        abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
         legend("topright",legend = "Criterion", lty = 2, lwd = 3, col = linecolors[3], bty = "n", cex = 1.5)
         
         ncounts = selectedmonthdata$aggregdata[,c("month","Ncount")]
@@ -763,8 +763,8 @@ output$Rec_Means <- renderPlot({
     
     boxplot(recdata1$Parameter.Value_Mean~recdata1$Rec_Season+recdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
-    abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Rec","Not Rec",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black", linecolors[3]),bty = "n", cex = 1.5)
+    abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
+    legend("topleft",legend = c("Rec","Not Rec",paste("Criterion -",crits$geomcrit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black", linecolors[3]),bty = "n", cex = 1.5)
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_rec_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_rec_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     
@@ -950,8 +950,8 @@ output$Irg_Means <- renderPlot({
     
     boxplot(irgdata1$Parameter.Value_Mean~irgdata1$Irg_Season+irgdata1$Year, at = positions, xaxt = "n", xlab = "", ylab = plotstuffs$concunit,col = boxcolors[2:1], lty = 1, outline = FALSE)
     axis(1, at = yearlab$position, label = yearlab$Year)
-    abline(h = input$crit, col = linecolors[3], lwd = 3, lty = 2)
-    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Criterion -",input$crit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black",linecolors[3]),bty = "n", cex = 1.5)
+    abline(h = crits$geomcrit, col = linecolors[3], lwd = 3, lty = 2)
+    legend("topleft",legend = c("Irrigation","Not Irrigation",paste("Criterion -",crits$geomcrit)), pch = c(22,22,NA), lty = c(NA, NA, 2), lwd = c(NA, NA, 3), pt.bg = c(boxcolors[2],boxcolors[1],NA), col = c("black","black",linecolors[3]),bty = "n", cex = 1.5)
     #text(aggdata1$position,rep(-10, length(aggdata1$position)), labels = paste("n =",aggdata1$Ncount_irg_C), cex = 0.7)
     mtext(paste("n =",aggdata1$Ncount_irg_C), side = 1, line = 3, at = aggdata1$position, las = 2, cex = 0.9)
     # Add data points
