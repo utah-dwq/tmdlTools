@@ -1,0 +1,11 @@
+name: tmdlapp
+title:
+username:
+account: ehinman
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5150815
+bundleId: 5264304
+url: https://ehinman.shinyapps.io/tmdlapp/
+when: 1637190373.00748
+lastSyncTime: 1637190373.00748

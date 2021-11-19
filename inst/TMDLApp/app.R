@@ -150,7 +150,7 @@ server <- function(input, output, session) {
 ### Reading in the data from the file to the reactive environment ###
  observe({
    # if(input$loadcalcs=="Yes"){
-   workbook$wb_path = "extdata\\fremont_wqp_data_demo.xlsx"
+   workbook$wb_path = "fremont_wqp_data_demo.xlsx"
      out <- tmdlCalcs(workbook$wb_path, inputs = TRUE, crit = 126, exportfromfunc = FALSE)
    # }else{
    #   dat = openxlsx::loadWorkbook(workbook$wb_path)
